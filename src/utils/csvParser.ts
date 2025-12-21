@@ -4,6 +4,7 @@ interface CSVRow {
   orderNumber: string;
   collectionName: string;
   alternativeName: string;
+  phoneNumber: string;
   collectionDate: string;
   collectionLocation: string;
   productName: string;
@@ -35,6 +36,15 @@ const COLUMN_MAPPINGS: Record<string, keyof CSVRow> = {
   'alt_name': 'alternativeName',
   'secondary name': 'alternativeName',
   'other name': 'alternativeName',
+  
+  'phone number': 'phoneNumber',
+  'phonenumber': 'phoneNumber',
+  'phone_number': 'phoneNumber',
+  'phone': 'phoneNumber',
+  'telephone': 'phoneNumber',
+  'tel': 'phoneNumber',
+  'mobile': 'phoneNumber',
+  'contact number': 'phoneNumber',
   
   'collection date': 'collectionDate',
   'collectiondate': 'collectionDate',
@@ -217,6 +227,7 @@ export function parseCSV(csvContent: string): ParseResult {
         orderNumber: orderKey,
         collectionName: row.collectionName?.trim() || 'Unknown',
         alternativeName: row.alternativeName?.trim() || undefined,
+        phoneNumber: row.phoneNumber?.trim() || undefined,
         collectionDate,
         collectionLocation: row.collectionLocation?.trim() || 'Unknown',
         products: [product],
@@ -250,6 +261,7 @@ export function exportOrdersToCSV(orders: Order[]): string {
     'Order Number',
     'Collection Name',
     'Alternative Name',
+    'Phone Number',
     'Collection Date',
     'Collection Location',
     'Product Name',
@@ -264,6 +276,7 @@ export function exportOrdersToCSV(orders: Order[]): string {
       order.orderNumber,
       order.collectionName,
       order.alternativeName || '',
+      order.phoneNumber || '',
       `December ${order.collectionDate}`,
       order.collectionLocation,
       product.name,

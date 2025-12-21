@@ -8,6 +8,7 @@ export interface Order {
   orderNumber: string;
   collectionName: string;
   alternativeName?: string;
+  phoneNumber?: string;
   collectionDate: '23' | '24';
   collectionLocation: string;
   products: Product[];

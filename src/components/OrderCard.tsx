@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Check, MapPin, Calendar, Package, Hash } from 'lucide-react';
+import { Check, MapPin, Calendar, Package, Hash, Phone } from 'lucide-react';
 
 interface OrderCardProps {
   order: Order;
@@ -62,6 +62,16 @@ export function OrderCard({ order }: OrderCardProps) {
             <MapPin className="w-5 h-5 text-primary" />
             <span className="font-medium">{order.collectionLocation}</span>
           </div>
+          {order.phoneNumber && (
+            <a 
+              href={`tel:${order.phoneNumber}`}
+              className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg hover:bg-primary/10 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Phone className="w-5 h-5 text-primary" />
+              <span className="font-medium">{order.phoneNumber}</span>
+            </a>
+          )}
         </div>
 
         {/* Products */}

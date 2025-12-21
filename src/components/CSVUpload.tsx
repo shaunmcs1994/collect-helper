@@ -133,14 +133,18 @@ export function CSVUpload() {
         {/* Required columns info */}
         <div className="mt-6 p-4 bg-secondary/50 rounded-lg">
           <h4 className="font-semibold mb-2">Required CSV Columns:</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-muted-foreground">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
             <span>• Order Number</span>
-            <span>• First Name</span>
-            <span>• Last Name</span>
+            <span>• Collection Name</span>
             <span>• Collection Date</span>
             <span>• Location</span>
             <span>• Product Name</span>
             <span>• Quantity</span>
+          </div>
+          <h4 className="font-semibold mt-4 mb-2">Optional Columns:</h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
+            <span>• Alternative Name</span>
+            <span>• Phone Number</span>
           </div>
         </div>
       </Card>
