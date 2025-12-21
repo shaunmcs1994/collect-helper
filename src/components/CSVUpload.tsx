@@ -134,18 +134,21 @@ export function CSVUpload() {
         <div className="mt-6 p-4 bg-secondary/50 rounded-lg">
           <h4 className="font-semibold mb-2">Required CSV Columns:</h4>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-            <span>• Order Number</span>
-            <span>• Collection Name</span>
+            <span>• Order Number (or Name)</span>
+            <span>• Customer/Collection Name</span>
             <span>• Collection Date</span>
             <span>• Location</span>
-            <span>• Product Name</span>
+            <span>• Product/Lineitem Name</span>
             <span>• Quantity</span>
           </div>
           <h4 className="font-semibold mt-4 mb-2">Optional Columns:</h4>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-            <span>• Alternative Name</span>
+            <span>• Alternative/Last Name</span>
             <span>• Phone Number</span>
           </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            ✓ Supports Shopify exports with multiple line items per order
+          </p>
         </div>
       </Card>
 
