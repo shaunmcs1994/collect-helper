@@ -28,16 +28,14 @@ export default function PendingOrders() {
       const query = searchQuery.toLowerCase();
       orders = orders.filter(o => 
         o.orderNumber.toLowerCase().includes(query) ||
-        o.customerFirstName.toLowerCase().includes(query) ||
-        o.customerLastName.toLowerCase().includes(query)
+        o.collectionName.toLowerCase().includes(query) ||
+        (o.alternativeName && o.alternativeName.toLowerCase().includes(query))
       );
     }
     
-    // Sort alphabetically by last name
+    // Sort alphabetically by collection name
     return orders.sort((a, b) => 
-      `${a.customerLastName} ${a.customerFirstName}`.localeCompare(
-        `${b.customerLastName} ${b.customerFirstName}`
-      )
+      a.collectionName.localeCompare(b.collectionName)
     );
   }, [getOrdersByStatus, dateFilter, locationFilter, searchQuery]);
 

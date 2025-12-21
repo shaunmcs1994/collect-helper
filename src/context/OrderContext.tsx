@@ -132,9 +132,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     const lowerQuery = query.toLowerCase().trim();
     return orders.filter(order => 
       order.orderNumber.toLowerCase().includes(lowerQuery) ||
-      order.customerFirstName.toLowerCase().includes(lowerQuery) ||
-      order.customerLastName.toLowerCase().includes(lowerQuery) ||
-      `${order.customerFirstName} ${order.customerLastName}`.toLowerCase().includes(lowerQuery)
+      order.collectionName.toLowerCase().includes(lowerQuery) ||
+      (order.alternativeName && order.alternativeName.toLowerCase().includes(lowerQuery))
     );
   }, [orders]);
 
