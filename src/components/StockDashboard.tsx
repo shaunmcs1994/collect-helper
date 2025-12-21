@@ -1,6 +1,7 @@
 import { useOrders } from '@/context/OrderContext';
 import { Card } from '@/components/ui/card';
 import { Package, TrendingDown, CheckCircle } from 'lucide-react';
+import { getProductStyle } from '@/utils/productColors';
 
 export function StockDashboard() {
   const { getStockSummary, getRemainingCount, orders } = useOrders();
@@ -76,52 +77,59 @@ export function StockDashboard() {
         </h3>
         
         <div className="space-y-3">
-          {stockItems.map((item) => (
-            <div
-              key={item.productName}
-              className="p-4 bg-secondary/50 rounded-lg"
-            >
-              <div className="flex items-start justify-between gap-4 mb-3">
-                <h4 className="text-lg font-semibold flex-1">{item.productName}</h4>
-                {item.remaining === 0 ? (
-                  <span className="flex items-center gap-1 text-success font-medium">
-                    <CheckCircle className="w-5 h-5" />
-                    Complete
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-warning-foreground font-medium">
-                    <TrendingDown className="w-5 h-5" />
-                    {item.remaining} left
-                  </span>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-2 bg-card rounded">
-                  <p className="text-2xl font-bold">{item.totalOrdered}</p>
-                  <p className="text-xs text-muted-foreground uppercase">Ordered</p>
+          {stockItems.map((item) => {
+            const style = getProductStyle(item.productName);
+            
+            return (
+              <div
+                key={item.productName}
+                className={`p-4 rounded-lg border-2 ${style.colorClass}`}
+              >
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{style.emoji}</span>
+                    <h4 className="text-lg font-semibold">{item.productName}</h4>
+                  </div>
+                  {item.remaining === 0 ? (
+                    <span className="flex items-center gap-1 text-success font-medium">
+                      <CheckCircle className="w-5 h-5" />
+                      Complete
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-warning-foreground font-medium">
+                      <TrendingDown className="w-5 h-5" />
+                      {item.remaining} left
+                    </span>
+                  )}
                 </div>
-                <div className="p-2 bg-success/10 rounded">
-                  <p className="text-2xl font-bold text-success">{item.totalCollected}</p>
-                  <p className="text-xs text-muted-foreground uppercase">Collected</p>
+                
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="p-2 bg-card rounded">
+                    <p className="text-2xl font-bold">{item.totalOrdered}</p>
+                    <p className="text-xs text-muted-foreground uppercase">Ordered</p>
+                  </div>
+                  <div className="p-2 bg-success/10 rounded">
+                    <p className="text-2xl font-bold text-success">{item.totalCollected}</p>
+                    <p className="text-xs text-muted-foreground uppercase">Collected</p>
+                  </div>
+                  <div className={`p-2 rounded ${item.remaining > 0 ? 'bg-warning/10' : 'bg-success/10'}`}>
+                    <p className={`text-2xl font-bold ${item.remaining > 0 ? 'text-warning-foreground' : 'text-success'}`}>
+                      {item.remaining}
+                    </p>
+                    <p className="text-xs text-muted-foreground uppercase">Remaining</p>
+                  </div>
                 </div>
-                <div className={`p-2 rounded ${item.remaining > 0 ? 'bg-warning/10' : 'bg-success/10'}`}>
-                  <p className={`text-2xl font-bold ${item.remaining > 0 ? 'text-warning-foreground' : 'text-success'}`}>
-                    {item.remaining}
-                  </p>
-                  <p className="text-xs text-muted-foreground uppercase">Remaining</p>
+                
+                {/* Progress bar */}
+                <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-success transition-all duration-300"
+                    style={{ width: `${item.totalOrdered > 0 ? (item.totalCollected / item.totalOrdered) * 100 : 0}%` }}
+                  />
                 </div>
               </div>
-              
-              {/* Progress bar */}
-              <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-success transition-all duration-300"
-                  style={{ width: `${item.totalOrdered > 0 ? (item.totalCollected / item.totalOrdered) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
     </div>

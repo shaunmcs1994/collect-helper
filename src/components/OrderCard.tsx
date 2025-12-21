@@ -13,7 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Check, MapPin, Calendar, Package, Hash, Phone, Undo2 } from 'lucide-react';
+import { Check, MapPin, Calendar, Package, Hash, Phone, Undo2, AlertTriangle } from 'lucide-react';
+import { getProductStyle, getConfusableWarning } from '@/utils/productColors';
 
 interface OrderCardProps {
   order: Order;
@@ -35,6 +36,9 @@ export function OrderCard({ order }: OrderCardProps) {
   };
 
   const totalItems = order.products.reduce((sum, p) => sum + p.quantity, 0);
+  
+  // Check if this order has any confusable products
+  const hasConfusableProducts = order.products.some(p => getConfusableWarning(p.name));
 
   return (
     <>
@@ -80,6 +84,16 @@ export function OrderCard({ order }: OrderCardProps) {
           )}
         </div>
 
+        {/* Confusable Products Warning */}
+        {hasConfusableProducts && (
+          <div className="mb-4 p-3 bg-warning/20 border border-warning/40 rounded-lg flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-warning-foreground flex-shrink-0" />
+            <p className="text-base font-medium text-warning-foreground">
+              This order contains similar-looking products. Please verify carefully!
+            </p>
+          </div>
+        )}
+
         {/* Products */}
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-3">
@@ -89,17 +103,30 @@ export function OrderCard({ order }: OrderCardProps) {
             </h4>
           </div>
           <ul className="space-y-2">
-            {order.products.map((product, index) => (
-              <li
-                key={`${order.id}-${index}`}
-                className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg"
-              >
-                <span className="text-lg font-medium">{product.name}</span>
-                <span className="text-2xl font-bold text-primary bg-primary/10 px-4 py-1 rounded-full">
-                  ×{product.quantity}
-                </span>
-              </li>
-            ))}
+            {order.products.map((product, index) => {
+              const style = getProductStyle(product.name);
+              const warning = getConfusableWarning(product.name);
+              
+              return (
+                <li
+                  key={`${order.id}-${index}`}
+                  className={`flex items-center justify-between p-3 rounded-lg border-2 ${style.colorClass}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{style.emoji}</span>
+                    <div>
+                      <span className="text-lg font-bold">{product.name}</span>
+                      {warning && (
+                        <p className="text-sm text-warning-foreground font-medium">{warning}</p>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-2xl font-bold text-primary bg-primary/10 px-4 py-1 rounded-full">
+                    ×{product.quantity}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
@@ -138,17 +165,55 @@ export function OrderCard({ order }: OrderCardProps) {
         )}
       </article>
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation Dialog - Enhanced with product list */}
       <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl">
               Confirm Collection
             </AlertDialogTitle>
-          <AlertDialogDescription className="text-lg">
-              Are you sure <strong>{order.collectionName}</strong> has collected their order?
-              <br /><br />
-              <strong>Order #{order.orderNumber}</strong> contains {totalItems} item(s).
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p className="text-lg">
+                  Are you sure <strong>{order.collectionName}</strong> has collected their order?
+                </p>
+                
+                {/* Enhanced Product List */}
+                <div className="bg-secondary/50 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Verify these products:
+                  </p>
+                  {order.products.map((product, index) => {
+                    const style = getProductStyle(product.name);
+                    const warning = getConfusableWarning(product.name);
+                    
+                    return (
+                      <div 
+                        key={`confirm-${order.id}-${index}`}
+                        className={`p-3 rounded-lg border-2 ${style.colorClass}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">{style.emoji}</span>
+                            <span className="text-xl font-bold text-foreground">{product.name}</span>
+                          </div>
+                          <span className="text-2xl font-bold text-primary">×{product.quantity}</span>
+                        </div>
+                        {warning && (
+                          <div className="mt-2 flex items-center gap-2 text-warning-foreground">
+                            <AlertTriangle className="w-4 h-4" />
+                            <span className="text-sm font-medium">{warning}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <p className="text-base text-muted-foreground">
+                  <strong>Order #{order.orderNumber}</strong> • {totalItems} item(s) total
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-3">
