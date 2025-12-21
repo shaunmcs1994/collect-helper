@@ -23,7 +23,7 @@ interface OrderCardProps {
 export function OrderCard({ order }: OrderCardProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showRevertConfirmation, setShowRevertConfirmation] = useState(false);
-  const { markAsCollected, markAsPending } = useOrders();
+  const { markAsCollected, markAsPending, productEmojis } = useOrders();
 
   const handleMarkCollected = () => {
     markAsCollected(order.id);
@@ -104,7 +104,7 @@ export function OrderCard({ order }: OrderCardProps) {
           </div>
           <ul className="space-y-2">
             {order.products.map((product, index) => {
-              const style = getProductStyle(product.name);
+              const style = getProductStyle(product.name, productEmojis);
               const warning = getConfusableWarning(product.name);
               
               return (
@@ -184,7 +184,7 @@ export function OrderCard({ order }: OrderCardProps) {
                     Verify these products:
                   </p>
                   {order.products.map((product, index) => {
-                    const style = getProductStyle(product.name);
+                    const style = getProductStyle(product.name, productEmojis);
                     const warning = getConfusableWarning(product.name);
                     
                     return (
