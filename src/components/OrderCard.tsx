@@ -37,8 +37,13 @@ export function OrderCard({ order }: OrderCardProps) {
         <header className="flex flex-wrap items-start justify-between gap-4 mb-4">
           <div className="flex-1 min-w-0">
             <h3 className="text-2xl md:text-3xl font-bold text-foreground truncate">
-              {order.customerFirstName} {order.customerLastName}
+              {order.collectionName}
             </h3>
+            {order.alternativeName && (
+              <p className="text-lg text-muted-foreground mt-1">
+                Alt: {order.alternativeName}
+              </p>
+            )}
             <div className="flex items-center gap-2 mt-1 text-muted-foreground">
               <Hash className="w-4 h-4" />
               <span className="text-lg font-medium">{order.orderNumber}</span>
@@ -112,8 +117,8 @@ export function OrderCard({ order }: OrderCardProps) {
             <AlertDialogTitle className="text-2xl">
               Confirm Collection
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-lg">
-              Are you sure <strong>{order.customerFirstName} {order.customerLastName}</strong> has collected their order?
+          <AlertDialogDescription className="text-lg">
+              Are you sure <strong>{order.collectionName}</strong> has collected their order?
               <br /><br />
               <strong>Order #{order.orderNumber}</strong> contains {totalItems} item(s).
               <br /><br />

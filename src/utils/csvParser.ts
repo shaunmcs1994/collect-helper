@@ -2,8 +2,8 @@ import { Order, Product } from '@/types/order';
 
 interface CSVRow {
   orderNumber: string;
-  customerFirstName: string;
-  customerLastName: string;
+  collectionName: string;
+  alternativeName: string;
   collectionDate: string;
   collectionLocation: string;
   productName: string;
@@ -19,18 +19,22 @@ const COLUMN_MAPPINGS: Record<string, keyof CSVRow> = {
   'order #': 'orderNumber',
   'order#': 'orderNumber',
   
-  'customer first name': 'customerFirstName',
-  'first name': 'customerFirstName',
-  'firstname': 'customerFirstName',
-  'first_name': 'customerFirstName',
-  'customer_first_name': 'customerFirstName',
+  'collection name': 'collectionName',
+  'collectionname': 'collectionName',
+  'collection_name': 'collectionName',
+  'customer name': 'collectionName',
+  'customername': 'collectionName',
+  'customer_name': 'collectionName',
+  'name': 'collectionName',
   
-  'customer last name': 'customerLastName',
-  'last name': 'customerLastName',
-  'lastname': 'customerLastName',
-  'last_name': 'customerLastName',
-  'customer_last_name': 'customerLastName',
-  'surname': 'customerLastName',
+  'alternative name': 'alternativeName',
+  'alternativename': 'alternativeName',
+  'alternative_name': 'alternativeName',
+  'alt name': 'alternativeName',
+  'altname': 'alternativeName',
+  'alt_name': 'alternativeName',
+  'secondary name': 'alternativeName',
+  'other name': 'alternativeName',
   
   'collection date': 'collectionDate',
   'collectiondate': 'collectionDate',
@@ -132,8 +136,7 @@ export function parseCSV(csvContent: string): ParseResult {
   const missingColumns: string[] = [];
   const requiredFields: (keyof CSVRow)[] = [
     'orderNumber',
-    'customerFirstName', 
-    'customerLastName',
+    'collectionName',
     'collectionDate',
     'collectionLocation',
     'productName',
@@ -212,8 +215,8 @@ export function parseCSV(csvContent: string): ParseResult {
       const order: Order = {
         id: `order_${orderKey}_${Date.now()}`,
         orderNumber: orderKey,
-        customerFirstName: row.customerFirstName?.trim() || 'Unknown',
-        customerLastName: row.customerLastName?.trim() || '',
+        collectionName: row.collectionName?.trim() || 'Unknown',
+        alternativeName: row.alternativeName?.trim() || undefined,
         collectionDate,
         collectionLocation: row.collectionLocation?.trim() || 'Unknown',
         products: [product],
@@ -245,8 +248,8 @@ export function parseCSV(csvContent: string): ParseResult {
 export function exportOrdersToCSV(orders: Order[]): string {
   const headers = [
     'Order Number',
-    'Customer First Name',
-    'Customer Last Name',
+    'Collection Name',
+    'Alternative Name',
     'Collection Date',
     'Collection Location',
     'Product Name',
@@ -259,8 +262,8 @@ export function exportOrdersToCSV(orders: Order[]): string {
   const rows = orders.flatMap(order =>
     order.products.map(product => [
       order.orderNumber,
-      order.customerFirstName,
-      order.customerLastName,
+      order.collectionName,
+      order.alternativeName || '',
       `December ${order.collectionDate}`,
       order.collectionLocation,
       product.name,

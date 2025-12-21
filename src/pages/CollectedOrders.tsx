@@ -28,8 +28,8 @@ export default function CollectedOrders() {
       const query = searchQuery.toLowerCase();
       orders = orders.filter(o => 
         o.orderNumber.toLowerCase().includes(query) ||
-        o.customerFirstName.toLowerCase().includes(query) ||
-        o.customerLastName.toLowerCase().includes(query)
+        o.collectionName.toLowerCase().includes(query) ||
+        (o.alternativeName && o.alternativeName.toLowerCase().includes(query))
       );
     }
     

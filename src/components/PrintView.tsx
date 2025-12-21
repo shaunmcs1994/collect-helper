@@ -15,11 +15,7 @@ export function PrintView() {
   const pendingOrders = getOrdersByStatus('pending')
     .filter(order => dateFilter === 'all' || order.collectionDate === dateFilter)
     .filter(order => locationFilter === 'all' || order.collectionLocation === locationFilter)
-    .sort((a, b) => {
-      const nameA = `${a.customerLastName} ${a.customerFirstName}`.toLowerCase();
-      const nameB = `${b.customerLastName} ${b.customerFirstName}`.toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
+    .sort((a, b) => a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase()));
 
   const handlePrint = () => {
     window.print();
@@ -60,8 +56,11 @@ export function PrintView() {
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h2 className="text-xl font-bold">
-                      {order.customerLastName}, {order.customerFirstName}
+                      {order.collectionName}
                     </h2>
+                    {order.alternativeName && (
+                      <p className="text-muted-foreground">Alt: {order.alternativeName}</p>
+                    )}
                     <p className="text-muted-foreground">Order #{order.orderNumber}</p>
                   </div>
                   <div className="text-right">

@@ -6,8 +6,8 @@ export interface Product {
 export interface Order {
   id: string;
   orderNumber: string;
-  customerFirstName: string;
-  customerLastName: string;
+  collectionName: string;
+  alternativeName?: string;
   collectionDate: '23' | '24';
   collectionLocation: string;
   products: Product[];
