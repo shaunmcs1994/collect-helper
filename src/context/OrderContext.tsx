@@ -7,6 +7,7 @@ interface OrderContextType {
   backups: Backup[];
   isLoading: boolean;
   importOrders: (orders: Order[]) => void;
+  addOrder: (order: Order) => void;
   markAsCollected: (orderId: string, collectedBy?: string) => void;
   markAsPending: (orderId: string) => void;
   getOrdersByStatus: (status: 'pending' | 'collected') => Order[];
@@ -108,6 +109,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       description: `Successfully imported ${newOrders.length} orders.`,
     });
   }, [orders, createBackupInternal]);
+
+  const addOrder = useCallback((order: Order) => {
+    setOrders(prev => [...prev, order]);
+  }, []);
 
   const markAsCollected = useCallback((orderId: string, collectedBy?: string) => {
     setOrders(prev => prev.map(order => {
@@ -247,6 +252,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       backups,
       isLoading,
       importOrders,
+      addOrder,
       markAsCollected,
       markAsPending,
       getOrdersByStatus,
