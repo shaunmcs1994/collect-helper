@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Check, MapPin, Calendar, Package, Hash, Phone } from 'lucide-react';
+import { Check, MapPin, Calendar, Package, Hash, Phone, Undo2 } from 'lucide-react';
 
 interface OrderCardProps {
   order: Order;
@@ -21,11 +21,17 @@ interface OrderCardProps {
 
 export function OrderCard({ order }: OrderCardProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const { markAsCollected } = useOrders();
+  const [showRevertConfirmation, setShowRevertConfirmation] = useState(false);
+  const { markAsCollected, markAsPending } = useOrders();
 
   const handleMarkCollected = () => {
     markAsCollected(order.id);
     setShowConfirmation(false);
+  };
+
+  const handleRevertToPending = () => {
+    markAsPending(order.id);
+    setShowRevertConfirmation(false);
   };
 
   const totalItems = order.products.reduce((sum, p) => sum + p.quantity, 0);
@@ -107,7 +113,7 @@ export function OrderCard({ order }: OrderCardProps) {
           </div>
         )}
 
-        {/* Action button */}
+        {/* Action buttons */}
         {order.status === 'pending' && (
           <Button
             onClick={() => setShowConfirmation(true)}
@@ -116,6 +122,18 @@ export function OrderCard({ order }: OrderCardProps) {
           >
             <Check className="w-6 h-6 mr-2" />
             MARK AS COLLECTED
+          </Button>
+        )}
+
+        {order.status === 'collected' && (
+          <Button
+            onClick={() => setShowRevertConfirmation(true)}
+            variant="outline"
+            className="w-full border-warning text-warning hover:bg-warning/10"
+            size="lg"
+          >
+            <Undo2 className="w-5 h-5 mr-2" />
+            UNDO - RETURN TO PENDING
           </Button>
         )}
       </article>
@@ -131,10 +149,6 @@ export function OrderCard({ order }: OrderCardProps) {
               Are you sure <strong>{order.collectionName}</strong> has collected their order?
               <br /><br />
               <strong>Order #{order.orderNumber}</strong> contains {totalItems} item(s).
-              <br /><br />
-              <span className="text-destructive font-medium">
-                This action cannot be undone.
-              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-3">
@@ -147,6 +161,34 @@ export function OrderCard({ order }: OrderCardProps) {
             >
               <Check className="w-5 h-5 mr-2" />
               Yes, Mark as Collected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Revert Confirmation Dialog */}
+      <AlertDialog open={showRevertConfirmation} onOpenChange={setShowRevertConfirmation}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl">
+              Return to Pending?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-lg">
+              Are you sure you want to mark <strong>{order.collectionName}</strong>'s order as NOT collected?
+              <br /><br />
+              This will move the order back to pending and update stock counts.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-3">
+            <AlertDialogCancel className="text-lg py-6">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRevertToPending}
+              className="bg-warning text-warning-foreground hover:bg-warning/90 text-lg py-6"
+            >
+              <Undo2 className="w-5 h-5 mr-2" />
+              Yes, Return to Pending
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -8,6 +8,7 @@ interface OrderContextType {
   isLoading: boolean;
   importOrders: (orders: Order[]) => void;
   markAsCollected: (orderId: string, collectedBy?: string) => void;
+  markAsPending: (orderId: string) => void;
   getOrdersByStatus: (status: 'pending' | 'collected') => Order[];
   searchOrders: (query: string) => Order[];
   getStockSummary: () => StockItem[];
@@ -122,6 +123,24 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const markAsPending = useCallback((orderId: string) => {
+    setOrders(prev => prev.map(order => {
+      if (order.id === orderId && order.status === 'collected') {
+        return {
+          ...order,
+          status: 'pending' as const,
+          collectedAt: undefined,
+          collectedBy: undefined,
+        };
+      }
+      return order;
+    }));
+    toast({
+      title: "Order Reverted",
+      description: "Order has been moved back to pending.",
+    });
+  }, []);
+
   const getOrdersByStatus = useCallback((status: 'pending' | 'collected') => {
     return orders.filter(order => order.status === status);
   }, [orders]);
@@ -229,6 +248,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       isLoading,
       importOrders,
       markAsCollected,
+      markAsPending,
       getOrdersByStatus,
       searchOrders,
       getStockSummary,
