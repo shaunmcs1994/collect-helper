@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useOrders } from '@/context/OrderContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, RotateCcw, Save, Trash2, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Download, RotateCcw, Save, Trash2, Clock, ShieldAlert } from 'lucide-react';
 import { exportOrdersToCSV } from '@/utils/csvParser';
+import { toast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,8 +18,12 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
+const ADMIN_PASSWORD = 'admin123';
+
 export function BackupPanel() {
   const { orders, backups, createBackup, restoreBackup, downloadBackup, clearAllData } = useOrders();
+  const [wipePassword, setWipePassword] = useState('');
+  const [wipeDialogOpen, setWipeDialogOpen] = useState(false);
 
   const handleExportCSV = () => {
     const csvContent = exportOrdersToCSV(orders);
@@ -29,6 +36,24 @@ export function BackupPanel() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleWipeAllOrders = () => {
+    if (wipePassword === ADMIN_PASSWORD) {
+      clearAllData();
+      setWipePassword('');
+      setWipeDialogOpen(false);
+      toast({
+        title: "All orders wiped",
+        description: "The system has been reset. A backup was created before wiping.",
+      });
+    } else {
+      toast({
+        title: "Incorrect password",
+        description: "Please enter the correct admin password.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -70,7 +95,10 @@ export function BackupPanel() {
             Export to CSV
           </Button>
           
-          <AlertDialog>
+          <AlertDialog open={wipeDialogOpen} onOpenChange={(open) => {
+            setWipeDialogOpen(open);
+            if (!open) setWipePassword('');
+          }}>
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
@@ -78,30 +106,38 @@ export function BackupPanel() {
                 className="text-lg py-6 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive hover:bg-destructive/5"
                 disabled={orders.length === 0}
               >
-                <Trash2 className="w-5 h-5 mr-2" />
-                Clear All Data
+                <ShieldAlert className="w-5 h-5 mr-2" />
+                Wipe All Orders
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle className="text-2xl text-destructive">
-                  ⚠️ Clear All Orders?
+                  🔒 Wipe All Orders?
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-lg">
-                  This will remove all {orders.length} orders from the system.
-                  <br /><br />
-                  A backup will be created automatically before clearing.
-                  <br /><br />
-                  <strong>This action cannot be undone.</strong>
+                <AlertDialogDescription asChild>
+                  <div className="text-lg space-y-4">
+                    <p>This will remove all {orders.length} orders from the system.</p>
+                    <p>A backup will be created automatically before wiping.</p>
+                    <p><strong>Enter admin password to confirm:</strong></p>
+                    <Input
+                      type="password"
+                      placeholder="Enter password"
+                      value={wipePassword}
+                      onChange={(e) => setWipePassword(e.target.value)}
+                      className="text-lg py-6"
+                    />
+                  </div>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="flex-col sm:flex-row gap-3">
                 <AlertDialogCancel className="text-lg py-6">Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={clearAllData}
+                  onClick={handleWipeAllOrders}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-lg py-6"
+                  disabled={!wipePassword}
                 >
-                  Yes, Clear All Data
+                  Wipe All Orders
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
