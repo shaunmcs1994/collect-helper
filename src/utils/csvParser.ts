@@ -13,21 +13,28 @@ interface CSVRow {
 
 // Column name mappings (case-insensitive)
 const COLUMN_MAPPINGS: Record<string, keyof CSVRow> = {
+  // Order number variations
   'order number': 'orderNumber',
   'ordernumber': 'orderNumber',
   'order_number': 'orderNumber',
   'order': 'orderNumber',
   'order #': 'orderNumber',
   'order#': 'orderNumber',
+  'name': 'orderNumber', // Shopify uses "Name" for order number like #13872
   
+  // Customer/Collection name variations
   'collection name': 'collectionName',
   'collectionname': 'collectionName',
   'collection_name': 'collectionName',
   'customer name': 'collectionName',
   'customername': 'collectionName',
   'customer_name': 'collectionName',
-  'name': 'collectionName',
+  'billing name': 'collectionName',
+  'shipping name': 'collectionName',
+  'first name': 'collectionName',
+  'firstname': 'collectionName',
   
+  // Alternative name variations
   'alternative name': 'alternativeName',
   'alternativename': 'alternativeName',
   'alternative_name': 'alternativeName',
@@ -36,7 +43,10 @@ const COLUMN_MAPPINGS: Record<string, keyof CSVRow> = {
   'alt_name': 'alternativeName',
   'secondary name': 'alternativeName',
   'other name': 'alternativeName',
+  'last name': 'alternativeName',
+  'lastname': 'alternativeName',
   
+  // Phone variations
   'phone number': 'phoneNumber',
   'phonenumber': 'phoneNumber',
   'phone_number': 'phoneNumber',
@@ -45,30 +55,48 @@ const COLUMN_MAPPINGS: Record<string, keyof CSVRow> = {
   'tel': 'phoneNumber',
   'mobile': 'phoneNumber',
   'contact number': 'phoneNumber',
+  'billing phone': 'phoneNumber',
+  'shipping phone': 'phoneNumber',
   
+  // Collection date variations
   'collection date': 'collectionDate',
   'collectiondate': 'collectionDate',
   'collection_date': 'collectionDate',
   'date': 'collectionDate',
   'pickup date': 'collectionDate',
+  'created at': 'collectionDate',
+  'order date': 'collectionDate',
   
+  // Location variations
   'collection location': 'collectionLocation',
   'collectionlocation': 'collectionLocation',
   'collection_location': 'collectionLocation',
   'location': 'collectionLocation',
   'store': 'collectionLocation',
   'pickup location': 'collectionLocation',
+  'shipping city': 'collectionLocation',
+  'billing city': 'collectionLocation',
   
+  // Product name variations (Shopify line item format)
   'product name': 'productName',
   'productname': 'productName',
   'product_name': 'productName',
   'product': 'productName',
   'item': 'productName',
   'item name': 'productName',
+  'lineitem name': 'productName',
+  'lineitem_name': 'productName',
+  'line item name': 'productName',
+  'lineitem sku': 'productName',
   
+  // Quantity variations
   'quantity': 'quantity',
   'qty': 'quantity',
   'amount': 'quantity',
+  'lineitem quantity': 'quantity',
+  'lineitem_quantity': 'quantity',
+  'line item quantity': 'quantity',
+  'lineitem qty': 'quantity',
 };
 
 function parseCSVLine(line: string): string[] {
@@ -101,11 +129,29 @@ function parseCSVLine(line: string): string[] {
 function normalizeDate(dateStr: string): '23' | '24' | null {
   const cleaned = dateStr.toLowerCase().trim();
   
-  // Check for explicit 23 or 24
-  if (cleaned.includes('23')) return '23';
-  if (cleaned.includes('24')) return '24';
+  // Check for explicit 23 or 24 in various formats
+  // Match standalone 23 or 24 (with word boundaries to avoid matching e.g. "2023")
+  if (/\b23\b/.test(cleaned) || cleaned.includes('dec 23') || cleaned.includes('23rd') || cleaned.includes('23 dec')) return '23';
+  if (/\b24\b/.test(cleaned) || cleaned.includes('dec 24') || cleaned.includes('24th') || cleaned.includes('24 dec')) return '24';
   
-  // Try to parse as date
+  // Try various date formats
+  // Format: DD/MM/YYYY or DD-MM-YYYY
+  const dmyMatch = cleaned.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1]);
+    if (day === 23) return '23';
+    if (day === 24) return '24';
+  }
+  
+  // Format: YYYY-MM-DD (ISO)
+  const isoMatch = cleaned.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (isoMatch) {
+    const day = parseInt(isoMatch[3]);
+    if (day === 23) return '23';
+    if (day === 24) return '24';
+  }
+  
+  // Try to parse as date string
   const date = new Date(dateStr);
   if (!isNaN(date.getTime())) {
     const day = date.getDate();
@@ -180,6 +226,8 @@ export function parseCSV(csvContent: string): ParseResult {
   
   // Parse data rows
   const orderMap = new Map<string, Order>();
+  // Track last known order data for inheriting customer details on sparse rows
+  let lastOrderData: Partial<CSVRow> | null = null;
   
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
@@ -193,48 +241,79 @@ export function parseCSV(csvContent: string): ParseResult {
       row[field] = values[index] || '';
     });
     
-    // Validate row
-    if (!row.orderNumber?.trim()) {
+    // Clean order number (remove # prefix if present, e.g., "#13872" -> "13872")
+    let orderKey = row.orderNumber?.trim().replace(/^#/, '') || '';
+    
+    // If order number is empty but we have a product, this might be a continuation row
+    // for the same order (common in Shopify exports)
+    if (!orderKey && row.productName?.trim() && lastOrderData?.orderNumber) {
+      orderKey = lastOrderData.orderNumber.trim().replace(/^#/, '');
+      // Inherit customer details from last order
+      row.orderNumber = lastOrderData.orderNumber;
+      row.collectionName = row.collectionName?.trim() || lastOrderData.collectionName;
+      row.alternativeName = row.alternativeName?.trim() || lastOrderData.alternativeName;
+      row.phoneNumber = row.phoneNumber?.trim() || lastOrderData.phoneNumber;
+      row.collectionDate = row.collectionDate?.trim() || lastOrderData.collectionDate;
+      row.collectionLocation = row.collectionLocation?.trim() || lastOrderData.collectionLocation;
+    }
+    
+    // Skip if still no order number
+    if (!orderKey) {
       warnings.push(`Row ${i + 1}: Missing order number, skipped.`);
       continue;
     }
     
+    // If this row has full customer details, save it for potential inheritance
+    if (row.collectionName?.trim()) {
+      lastOrderData = { ...row };
+    }
+    
+    // For existing orders (multi-line), inherit missing details
+    if (orderMap.has(orderKey)) {
+      const existingOrder = orderMap.get(orderKey)!;
+      
+      // Only add product if it has a name
+      if (row.productName?.trim()) {
+        const quantity = parseInt(row.quantity || '1');
+        const product: Product = {
+          name: row.productName.trim(),
+          quantity: Math.max(1, isNaN(quantity) ? 1 : quantity),
+        };
+        existingOrder.products.push(product);
+      }
+      continue;
+    }
+    
+    // New order - validate collection date
     const collectionDate = normalizeDate(row.collectionDate || '');
     if (!collectionDate) {
       warnings.push(`Row ${i + 1}: Invalid collection date "${row.collectionDate}", must be 23 or 24 December.`);
       continue;
     }
     
-    const quantity = parseInt(row.quantity || '0');
-    if (isNaN(quantity) || quantity <= 0) {
+    const quantity = parseInt(row.quantity || '1');
+    if (row.quantity && (isNaN(parseInt(row.quantity)) || parseInt(row.quantity) <= 0)) {
       warnings.push(`Row ${i + 1}: Invalid quantity "${row.quantity}", defaulting to 1.`);
     }
     
-    const orderKey = row.orderNumber.trim();
     const product: Product = {
       name: row.productName?.trim() || 'Unknown Product',
-      quantity: Math.max(1, quantity || 1),
+      quantity: Math.max(1, isNaN(quantity) ? 1 : quantity),
     };
     
-    if (orderMap.has(orderKey)) {
-      // Add product to existing order
-      const existingOrder = orderMap.get(orderKey)!;
-      existingOrder.products.push(product);
-    } else {
-      // Create new order
-      const order: Order = {
-        id: `order_${orderKey}_${Date.now()}`,
-        orderNumber: orderKey,
-        collectionName: row.collectionName?.trim() || 'Unknown',
-        alternativeName: row.alternativeName?.trim() || undefined,
-        phoneNumber: row.phoneNumber?.trim() || undefined,
-        collectionDate,
-        collectionLocation: row.collectionLocation?.trim() || 'Unknown',
-        products: [product],
-        status: 'pending',
-      };
-      orderMap.set(orderKey, order);
-    }
+    // Create new order
+    const order: Order = {
+      id: `order_${orderKey}_${Date.now()}`,
+      orderNumber: orderKey,
+      collectionName: row.collectionName?.trim() || 'Unknown',
+      alternativeName: row.alternativeName?.trim() || undefined,
+      phoneNumber: row.phoneNumber?.trim() || undefined,
+      collectionDate,
+      collectionLocation: row.collectionLocation?.trim() || 'Unknown',
+      products: [product],
+      status: 'pending',
+    };
+    orderMap.set(orderKey, order);
   }
   
   const orders = Array.from(orderMap.values());
