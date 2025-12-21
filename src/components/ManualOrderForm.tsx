@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useOrders } from '@/context/OrderContext';
 import { Order, Product } from '@/types/order';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,17 @@ interface ProductEntry {
 export function ManualOrderForm() {
   const { addOrder, getLocations, orders } = useOrders();
   const existingLocations = getLocations();
+
+  // Get unique product names from existing orders
+  const existingProducts = useMemo(() => {
+    const productSet = new Set<string>();
+    orders.forEach(order => {
+      order.products.forEach(product => {
+        productSet.add(product.name);
+      });
+    });
+    return Array.from(productSet).sort();
+  }, [orders]);
 
   // Generate next staff order number
   const generateOrderNumber = () => {
@@ -265,37 +276,52 @@ export function ManualOrderForm() {
           </div>
 
           <div className="space-y-3">
-            {products.map((product, index) => (
-              <div key={product.id} className="flex gap-3 items-start">
-                <div className="flex-1">
-                  <Input
-                    value={product.name}
-                    onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
-                    placeholder={`Product ${index + 1} name`}
-                    className="text-lg py-6"
-                  />
-                </div>
-                <div className="w-24">
-                  <Input
-                    type="number"
-                    min="1"
-                    value={product.quantity}
-                    onChange={(e) => updateProduct(product.id, 'quantity', parseInt(e.target.value) || 1)}
-                    className="text-lg py-6 text-center"
-                  />
-                </div>
-                <Button
+            {existingProducts.length === 0 ? (
+              <p className="text-muted-foreground p-4 bg-secondary/50 rounded-lg text-center">
+                No products available. Please upload a CSV with orders first to populate the product list.
+              </p>
+            ) : (
+              products.map((product) => (
+                <div key={product.id} className="flex gap-3 items-start">
+                  <div className="flex-1">
+                    <Select
+                      value={product.name}
+                      onValueChange={(value) => updateProduct(product.id, 'name', value)}
+                    >
+                      <SelectTrigger className="text-lg py-6">
+                        <SelectValue placeholder="Select a product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {existingProducts.map((productName) => (
+                          <SelectItem key={productName} value={productName} className="text-base">
+                            {productName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-24">
+                    <Input
+                      type="number"
+                      min="1"
+                      value={product.quantity}
+                      onChange={(e) => updateProduct(product.id, 'quantity', parseInt(e.target.value) || 1)}
+                      className="text-lg py-6 text-center"
+                    />
+                  </div>
+                  <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   className="h-12 w-12 text-muted-foreground hover:text-destructive"
                   onClick={() => removeProductEntry(product.id)}
-                  disabled={products.length === 1}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </Button>
-              </div>
-            ))}
+                    disabled={products.length === 1}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </Button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
