@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useOrders } from '@/context/OrderContext';
-import { Order, Product } from '@/types/order';
+import { Order } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,8 +12,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, UserPlus, Package } from 'lucide-react';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Plus, Trash2, UserPlus, Package, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { getProductStyle } from '@/utils/productColors';
+import { cn } from '@/lib/utils';
 
 interface ProductEntry {
   id: string;
@@ -22,7 +37,7 @@ interface ProductEntry {
 }
 
 export function ManualOrderForm() {
-  const { addOrder, getLocations, orders } = useOrders();
+  const { addOrder, getLocations, orders, productEmojis } = useOrders();
   const existingLocations = getLocations();
 
   // Get unique product names from existing orders
@@ -56,6 +71,7 @@ export function ManualOrderForm() {
   const [products, setProducts] = useState<ProductEntry[]>([
     { id: crypto.randomUUID(), name: '', quantity: 1 }
   ]);
+  const [openComboboxId, setOpenComboboxId] = useState<string | null>(null);
 
   const addProductEntry = () => {
     setProducts(prev => [...prev, { id: crypto.randomUUID(), name: '', quantity: 1 }]);
@@ -281,46 +297,91 @@ export function ManualOrderForm() {
                 No products available. Please upload a CSV with orders first to populate the product list.
               </p>
             ) : (
-              products.map((product) => (
-                <div key={product.id} className="flex gap-3 items-start">
-                  <div className="flex-1">
-                    <Select
-                      value={product.name}
-                      onValueChange={(value) => updateProduct(product.id, 'name', value)}
+              products.map((product) => {
+                const style = product.name ? getProductStyle(product.name, productEmojis) : null;
+                
+                return (
+                  <div key={product.id} className="flex gap-3 items-start">
+                    <div className="flex-1">
+                      <Popover 
+                        open={openComboboxId === product.id} 
+                        onOpenChange={(open) => setOpenComboboxId(open ? product.id : null)}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openComboboxId === product.id}
+                            className="w-full justify-between text-lg py-6 h-auto"
+                          >
+                            {product.name ? (
+                              <span className="flex items-center gap-2">
+                                <span>{style?.emoji}</span>
+                                <span>{product.name}</span>
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">Type to search products...</span>
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0 bg-popover" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search products..." className="text-lg" />
+                            <CommandList>
+                              <CommandEmpty>No product found.</CommandEmpty>
+                              <CommandGroup className="max-h-64 overflow-auto">
+                                {existingProducts.map((productName) => {
+                                  const prodStyle = getProductStyle(productName, productEmojis);
+                                  return (
+                                    <CommandItem
+                                      key={productName}
+                                      value={productName}
+                                      onSelect={() => {
+                                        updateProduct(product.id, 'name', productName);
+                                        setOpenComboboxId(null);
+                                      }}
+                                      className="text-base py-3"
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          product.name === productName ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      <span className="mr-2 text-xl">{prodStyle.emoji}</span>
+                                      {productName}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="w-24">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={product.quantity}
+                        onChange={(e) => updateProduct(product.id, 'quantity', parseInt(e.target.value) || 1)}
+                        className="text-lg py-6 text-center"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeProductEntry(product.id)}
+                      disabled={products.length === 1}
                     >
-                      <SelectTrigger className="text-lg py-6">
-                        <SelectValue placeholder="Select a product" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {existingProducts.map((productName) => (
-                          <SelectItem key={productName} value={productName} className="text-base">
-                            {productName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Trash2 className="w-5 h-5" />
+                    </Button>
                   </div>
-                  <div className="w-24">
-                    <Input
-                      type="number"
-                      min="1"
-                      value={product.quantity}
-                      onChange={(e) => updateProduct(product.id, 'quantity', parseInt(e.target.value) || 1)}
-                      className="text-lg py-6 text-center"
-                    />
-                  </div>
-                  <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-12 w-12 text-muted-foreground hover:text-destructive"
-                  onClick={() => removeProductEntry(product.id)}
-                    disabled={products.length === 1}
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </Button>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

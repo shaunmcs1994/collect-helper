@@ -6,6 +6,7 @@ interface OrderContextType {
   orders: Order[];
   backups: Backup[];
   isLoading: boolean;
+  productEmojis: Record<string, string>;
   importOrders: (orders: Order[]) => void;
   addOrder: (order: Order) => void;
   markAsCollected: (orderId: string, collectedBy?: string) => void;
@@ -15,6 +16,7 @@ interface OrderContextType {
   getStockSummary: () => StockItem[];
   getRemainingCount: (date?: '23' | '24') => number;
   getLocations: () => string[];
+  setProductEmoji: (productName: string, emoji: string) => void;
   createBackup: () => void;
   restoreBackup: (backupId: string) => void;
   downloadBackup: () => void;
@@ -25,12 +27,14 @@ const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'buzzy_bee_orders';
 const BACKUP_KEY = 'buzzy_bee_backups';
+const EMOJI_KEY = 'buzzy_bee_product_emojis';
 const MAX_BACKUPS = 10;
 const AUTO_BACKUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 export function OrderProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [backups, setBackups] = useState<Backup[]>([]);
+  const [productEmojis, setProductEmojis] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   // Load data from localStorage on mount
@@ -38,12 +42,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     try {
       const savedOrders = localStorage.getItem(STORAGE_KEY);
       const savedBackups = localStorage.getItem(BACKUP_KEY);
+      const savedEmojis = localStorage.getItem(EMOJI_KEY);
       
       if (savedOrders) {
         setOrders(JSON.parse(savedOrders));
       }
       if (savedBackups) {
         setBackups(JSON.parse(savedBackups));
+      }
+      if (savedEmojis) {
+        setProductEmojis(JSON.parse(savedEmojis));
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -70,6 +78,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(BACKUP_KEY, JSON.stringify(backups));
     }
   }, [backups, isLoading]);
+
+  // Save product emojis to localStorage
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem(EMOJI_KEY, JSON.stringify(productEmojis));
+    }
+  }, [productEmojis, isLoading]);
 
   // Auto-backup every 5 minutes
   useEffect(() => {
@@ -200,6 +215,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     return Array.from(locations).sort();
   }, [orders]);
 
+  const setProductEmoji = useCallback((productName: string, emoji: string) => {
+    setProductEmojis(prev => ({
+      ...prev,
+      [productName]: emoji
+    }));
+  }, []);
+
   const createBackup = useCallback(() => {
     createBackupInternal();
     toast({
@@ -251,6 +273,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       orders,
       backups,
       isLoading,
+      productEmojis,
       importOrders,
       addOrder,
       markAsCollected,
@@ -260,6 +283,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       getStockSummary,
       getRemainingCount,
       getLocations,
+      setProductEmoji,
       createBackup,
       restoreBackup,
       downloadBackup,

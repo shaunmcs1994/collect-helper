@@ -2,9 +2,10 @@ import { useOrders } from '@/context/OrderContext';
 import { Card } from '@/components/ui/card';
 import { Package, TrendingDown, CheckCircle } from 'lucide-react';
 import { getProductStyle } from '@/utils/productColors';
+import { EmojiPicker } from '@/components/EmojiPicker';
 
 export function StockDashboard() {
-  const { getStockSummary, getRemainingCount, orders } = useOrders();
+  const { getStockSummary, getRemainingCount, orders, productEmojis, setProductEmoji } = useOrders();
   const stockItems = getStockSummary();
   const remaining23 = getRemainingCount('23');
   const remaining24 = getRemainingCount('24');
@@ -74,11 +75,14 @@ export function StockDashboard() {
         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
           <Package className="w-5 h-5" />
           Product Stock Levels
+          <span className="text-sm font-normal text-muted-foreground ml-2">
+            (click emoji to customize)
+          </span>
         </h3>
         
         <div className="space-y-3">
           {stockItems.map((item) => {
-            const style = getProductStyle(item.productName);
+            const style = getProductStyle(item.productName, productEmojis);
             
             return (
               <div
@@ -86,8 +90,12 @@ export function StockDashboard() {
                 className={`p-4 rounded-lg border-2 ${style.colorClass}`}
               >
                 <div className="flex items-start justify-between gap-4 mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{style.emoji}</span>
+                  <div className="flex items-center gap-2">
+                    <EmojiPicker
+                      currentEmoji={style.emoji}
+                      productName={item.productName}
+                      onSelect={(emoji) => setProductEmoji(item.productName, emoji)}
+                    />
                     <h4 className="text-lg font-semibold">{item.productName}</h4>
                   </div>
                   {item.remaining === 0 ? (

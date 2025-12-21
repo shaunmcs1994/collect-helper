@@ -1,32 +1,40 @@
 // Product color and emoji mapping system to prevent confusion between similar products
 
-// Manual overrides for confusable products - use highly contrasting colors
-const CONFUSABLE_OVERRIDES: Record<string, { color: string; emoji: string }> = {
-  // Blondie vs Brownie - very different colors
-  'blondie': { color: 'bg-amber-100 border-amber-400', emoji: '🍯' },
-  'brownie': { color: 'bg-stone-200 border-stone-500', emoji: '🍫' },
-};
+// Large emoji palette for unique per-product assignment
+const EMOJI_PALETTE = [
+  '🍰', '🧁', '🍪', '🎂', '🍩', '🥐', '🥮', '🍮', '🥧', '🧇',
+  '🌟', '💫', '⭐', '✨', '🌙', '☀️', '🌈', '🔥', '💎', '🎀',
+  '🍓', '🍒', '🍑', '🥭', '🍋', '🍊', '🍎', '🍏', '🍇', '🫐',
+  '🌺', '🌸', '🌹', '🌷', '🌻', '💐', '🪻', '🌼', '🪷', '🌿',
+  '🦋', '🐝', '🐞', '🦄', '🐣', '🦊', '🐰', '🦢', '🕊️', '🦩',
+  '💝', '💖', '💗', '💜', '💙', '💚', '🧡', '❤️', '🤍', '🖤',
+  '🎄', '🎁', '🎅', '⛄', '❄️', '🦌', '🔔', '🕯️', '🌲', '🎿',
+  '🍫', '🍬', '🍭', '🍡', '🥜', '🌰', '🍿', '🧈', '🥛', '☕',
+];
 
 // Color palette for auto-assignment (distinct, high-contrast colors)
 const COLOR_PALETTE = [
-  { color: 'bg-rose-100 border-rose-400', emoji: '🌹' },
-  { color: 'bg-sky-100 border-sky-400', emoji: '💎' },
-  { color: 'bg-emerald-100 border-emerald-400', emoji: '🌿' },
-  { color: 'bg-violet-100 border-violet-400', emoji: '💜' },
-  { color: 'bg-orange-100 border-orange-400', emoji: '🍊' },
-  { color: 'bg-teal-100 border-teal-400', emoji: '🌊' },
-  { color: 'bg-pink-100 border-pink-400', emoji: '🌸' },
-  { color: 'bg-lime-100 border-lime-400', emoji: '🍃' },
-  { color: 'bg-cyan-100 border-cyan-400', emoji: '❄️' },
-  { color: 'bg-fuchsia-100 border-fuchsia-400', emoji: '🌺' },
-  { color: 'bg-yellow-100 border-yellow-400', emoji: '⭐' },
-  { color: 'bg-indigo-100 border-indigo-400', emoji: '🔮' },
-  { color: 'bg-red-100 border-red-400', emoji: '❤️' },
-  { color: 'bg-green-100 border-green-400', emoji: '🍀' },
-  { color: 'bg-blue-100 border-blue-400', emoji: '💙' },
+  'bg-rose-100 border-rose-400',
+  'bg-sky-100 border-sky-400',
+  'bg-emerald-100 border-emerald-400',
+  'bg-violet-100 border-violet-400',
+  'bg-orange-100 border-orange-400',
+  'bg-teal-100 border-teal-400',
+  'bg-pink-100 border-pink-400',
+  'bg-lime-100 border-lime-400',
+  'bg-cyan-100 border-cyan-400',
+  'bg-fuchsia-100 border-fuchsia-400',
+  'bg-yellow-100 border-yellow-400',
+  'bg-indigo-100 border-indigo-400',
+  'bg-red-100 border-red-400',
+  'bg-green-100 border-green-400',
+  'bg-blue-100 border-blue-400',
+  'bg-amber-100 border-amber-400',
+  'bg-stone-100 border-stone-400',
+  'bg-purple-100 border-purple-400',
 ];
 
-// Simple hash function for deterministic color assignment
+// Simple hash function for deterministic assignment
 function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -37,17 +45,6 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
-// Check if a product name matches any confusable override
-function getOverrideKey(productName: string): string | null {
-  const normalized = productName.toLowerCase().trim();
-  for (const key of Object.keys(CONFUSABLE_OVERRIDES)) {
-    if (normalized.includes(key)) {
-      return key;
-    }
-  }
-  return null;
-}
-
 export interface ProductStyle {
   colorClass: string;
   emoji: string;
@@ -55,37 +52,48 @@ export interface ProductStyle {
 }
 
 // Get consistent color and emoji for a product
-export function getProductStyle(productName: string): ProductStyle {
-  const overrideKey = getOverrideKey(productName);
+// Custom emojis take priority, then fall back to hash-based assignment
+export function getProductStyle(productName: string, customEmojis?: Record<string, string>): ProductStyle {
+  const hash = hashString(productName);
   
-  if (overrideKey) {
-    const override = CONFUSABLE_OVERRIDES[overrideKey];
+  // Get color from palette
+  const colorIndex = hash % COLOR_PALETTE.length;
+  const colorClass = COLOR_PALETTE[colorIndex];
+  
+  // Check for custom emoji first
+  if (customEmojis && customEmojis[productName]) {
     return {
-      colorClass: override.color,
-      emoji: override.emoji,
-      isConfusable: true,
+      colorClass,
+      emoji: customEmojis[productName],
+      isConfusable: false,
     };
   }
   
-  // Use hash to deterministically pick from palette
-  const index = hashString(productName) % COLOR_PALETTE.length;
-  const palette = COLOR_PALETTE[index];
+  // Fall back to hash-based emoji (unique per product)
+  const emojiIndex = hash % EMOJI_PALETTE.length;
+  const emoji = EMOJI_PALETTE[emojiIndex];
   
   return {
-    colorClass: palette.color,
-    emoji: palette.emoji,
+    colorClass,
+    emoji,
     isConfusable: false,
   };
 }
 
-// Check if two products are confusable with each other
+// Check if two products might be confusable based on similar names
 export function areProductsConfusable(name1: string, name2: string): boolean {
-  const key1 = getOverrideKey(name1);
-  const key2 = getOverrideKey(name2);
+  const n1 = name1.toLowerCase();
+  const n2 = name2.toLowerCase();
   
-  // If both are in the confusable list, they're potentially confusable
-  if (key1 && key2 && key1 !== key2) {
-    return true;
+  // Check for common confusable pairs
+  const confusablePairs = [
+    ['blondie', 'brownie'],
+  ];
+  
+  for (const [a, b] of confusablePairs) {
+    if ((n1.includes(a) && n2.includes(b)) || (n1.includes(b) && n2.includes(a))) {
+      return true;
+    }
   }
   
   return false;
@@ -103,4 +111,9 @@ export function getConfusableWarning(productName: string): string | null {
   }
   
   return null;
+}
+
+// Get list of common food/dessert emojis for the picker
+export function getEmojiPickerOptions(): string[] {
+  return EMOJI_PALETTE;
 }
