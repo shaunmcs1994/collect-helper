@@ -9,6 +9,7 @@ interface OrderContextType {
   backups: Backup[];
   isLoading: boolean;
   productEmojis: Record<string, string>;
+  productColors: Record<string, string>;
   getDisplayName: (userId: string) => string;
   importOrders: (orders: Order[]) => Promise<void>;
   addOrder: (order: Order) => Promise<void>;
@@ -20,6 +21,7 @@ interface OrderContextType {
   getRemainingCount: (date?: '23' | '24') => number;
   getLocations: () => string[];
   setProductEmoji: (productName: string, emoji: string) => Promise<void>;
+  setProductColor: (productName: string, color: { bg: string; border: string }) => Promise<void>;
   createBackup: () => void;
   restoreBackup: (backupId: string) => void;
   downloadBackup: () => void;
@@ -34,6 +36,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [productEmojis, setProductEmojis] = useState<Record<string, string>>({});
+  const [productColors, setProductColors] = useState<Record<string, string>>({});
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const { user, displayName } = useAuth();
@@ -140,11 +143,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       const emojiMap: Record<string, string> = {};
+      const colorMap: Record<string, string> = {};
       (data || []).forEach(row => {
         emojiMap[row.product_name] = row.emoji;
+        if ((row as any).color) {
+          colorMap[row.product_name] = (row as any).color;
+        }
       });
 
       setProductEmojis(emojiMap);
+      setProductColors(colorMap);
     } catch (error) {
       console.error('Error loading product emojis:', error);
     }
@@ -402,7 +410,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase
         .from('product_emojis')
         .upsert(
-          { product_name: productName, emoji },
+          { product_name: productName, emoji } as any,
           { onConflict: 'product_name' }
         );
 
@@ -418,6 +426,54 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Error",
         description: "Could not save emoji.",
+        variant: "destructive",
+      });
+    }
+  }, [user]);
+
+  const setProductColor = useCallback(async (productName: string, color: { bg: string; border: string }) => {
+    if (!user) return;
+
+    try {
+      const colorJson = JSON.stringify(color);
+      
+      // Check if record exists
+      const { data: existing } = await supabase
+        .from('product_emojis')
+        .select('product_name')
+        .eq('product_name', productName)
+        .maybeSingle();
+      
+      if (existing) {
+        // Update existing record
+        const { error } = await supabase
+          .from('product_emojis')
+          .update({ color: colorJson } as any)
+          .eq('product_name', productName);
+        if (error) throw error;
+      } else {
+        // Insert new record with default emoji
+        const { error } = await supabase
+          .from('product_emojis')
+          .insert({ product_name: productName, emoji: '📦', color: colorJson } as any);
+        if (error) throw error;
+      }
+
+      // Optimistic update
+      setProductColors(prev => ({
+        ...prev,
+        [productName]: colorJson
+      }));
+      
+      toast({
+        title: "Color Updated",
+        description: `Color saved for ${productName}`,
+      });
+    } catch (error) {
+      console.error('Error setting product color:', error);
+      toast({
+        title: "Error",
+        description: "Could not save color.",
         variant: "destructive",
       });
     }
@@ -502,6 +558,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       backups,
       isLoading,
       productEmojis,
+      productColors,
       getDisplayName,
       importOrders,
       addOrder,
@@ -513,6 +570,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       getRemainingCount,
       getLocations,
       setProductEmoji,
+      setProductColor,
       createBackup,
       restoreBackup,
       downloadBackup,

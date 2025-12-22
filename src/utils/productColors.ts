@@ -2,14 +2,35 @@
 
 // Large emoji palette for unique per-product assignment
 const EMOJI_PALETTE = [
+  // Food & Desserts
   '🍰', '🧁', '🍪', '🎂', '🍩', '🥐', '🥮', '🍮', '🥧', '🧇',
-  '🌟', '💫', '⭐', '✨', '🌙', '☀️', '🌈', '🔥', '💎', '🎀',
-  '🍓', '🍒', '🍑', '🥭', '🍋', '🍊', '🍎', '🍏', '🍇', '🫐',
-  '🌺', '🌸', '🌹', '🌷', '🌻', '💐', '🪻', '🌼', '🪷', '🌿',
-  '🦋', '🐝', '🐞', '🦄', '🐣', '🦊', '🐰', '🦢', '🕊️', '🦩',
-  '💝', '💖', '💗', '💜', '💙', '💚', '🧡', '❤️', '🤍', '🖤',
-  '🎄', '🎁', '🎅', '⛄', '❄️', '🦌', '🔔', '🕯️', '🌲', '🎿',
   '🍫', '🍬', '🍭', '🍡', '🥜', '🌰', '🍿', '🧈', '🥛', '☕',
+  '🧀', '🥚', '🍳', '🥞', '🧇', '🥯', '🥨', '🥖', '🍞', '🥪',
+  '🌮', '🌯', '🥙', '🧆', '🥘', '🍲', '🥗', '🍝', '🍜', '🍛',
+  // Fruits
+  '🍓', '🍒', '🍑', '🥭', '🍋', '🍊', '🍎', '🍏', '🍇', '🫐',
+  '🍈', '🍉', '🍌', '🍍', '🥝', '🥥', '🍐', '🫒', '🥑', '🍆',
+  // Flowers & Nature
+  '🌺', '🌸', '🌹', '🌷', '🌻', '💐', '🪻', '🌼', '🪷', '🌿',
+  '🍀', '🌱', '🌳', '🌴', '🌵', '🎋', '🎍', '🍃', '🍂', '🍁',
+  // Animals
+  '🦋', '🐝', '🐞', '🦄', '🐣', '🦊', '🐰', '🦢', '🕊️', '🦩',
+  '🐶', '🐱', '🐭', '🐹', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮',
+  '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🦆', '🦅', '🦉', '🦇',
+  // Hearts & Symbols
+  '💝', '💖', '💗', '💜', '💙', '💚', '🧡', '❤️', '🤍', '🖤',
+  '💛', '🩷', '🩵', '🩶', '❤️‍🔥', '💕', '💞', '💓', '💘', '💟',
+  // Stars & Celestial
+  '🌟', '💫', '⭐', '✨', '🌙', '☀️', '🌈', '🔥', '💎', '🎀',
+  '🌞', '🌝', '🌛', '🌜', '⚡', '💥', '🌊', '🌪️', '🌸', '🏵️',
+  // Christmas & Holidays
+  '🎄', '🎁', '🎅', '⛄', '❄️', '🦌', '🔔', '🕯️', '🌲', '🎿',
+  '🤶', '🧝', '🎀', '🧦', '🎊', '🎉', '🎈', '🎆', '🎇', '🪅',
+  // Objects & Fun
+  '👑', '🏆', '🎯', '🎪', '🎨', '🎭', '🎬', '🎤', '🎧', '🎹',
+  '🎸', '🥁', '🎺', '🎻', '🪘', '🪗', '🎰', '🧩', '🎲', '🃏',
+  '🛒', '🧺', '🎒', '👜', '👠', '👟', '🧢', '👒', '🎩', '🪄',
+  '💌', '📦', '🏷️', '🧧', '🪩', '🎮', '🕹️', '🧸', '🪆', '🪀',
 ];
 
 // Color palette for auto-assignment (distinct, high-contrast colors)
@@ -34,6 +55,28 @@ const COLOR_PALETTE = [
   'bg-purple-100 border-purple-400',
 ];
 
+// Preset colors for quick selection
+export const PRESET_COLORS = [
+  { name: 'Rose', value: '#ffe4e6', border: '#fb7185' },
+  { name: 'Pink', value: '#fce7f3', border: '#f472b6' },
+  { name: 'Fuchsia', value: '#fae8ff', border: '#e879f9' },
+  { name: 'Purple', value: '#f3e8ff', border: '#c084fc' },
+  { name: 'Violet', value: '#ede9fe', border: '#a78bfa' },
+  { name: 'Indigo', value: '#e0e7ff', border: '#818cf8' },
+  { name: 'Blue', value: '#dbeafe', border: '#60a5fa' },
+  { name: 'Sky', value: '#e0f2fe', border: '#38bdf8' },
+  { name: 'Cyan', value: '#cffafe', border: '#22d3ee' },
+  { name: 'Teal', value: '#ccfbf1', border: '#2dd4bf' },
+  { name: 'Emerald', value: '#d1fae5', border: '#34d399' },
+  { name: 'Green', value: '#dcfce7', border: '#4ade80' },
+  { name: 'Lime', value: '#ecfccb', border: '#a3e635' },
+  { name: 'Yellow', value: '#fef9c3', border: '#facc15' },
+  { name: 'Amber', value: '#fef3c7', border: '#fbbf24' },
+  { name: 'Orange', value: '#ffedd5', border: '#fb923c' },
+  { name: 'Red', value: '#fee2e2', border: '#f87171' },
+  { name: 'Stone', value: '#f5f5f4', border: '#a8a29e' },
+];
+
 // Simple hash function for deterministic assignment
 function hashString(str: string): number {
   let hash = 0;
@@ -47,23 +90,47 @@ function hashString(str: string): number {
 
 export interface ProductStyle {
   colorClass: string;
+  customColor?: { bg: string; border: string };
   emoji: string;
   isConfusable: boolean;
 }
 
+export interface ProductCustomization {
+  emoji?: string;
+  color?: string; // JSON string of { bg, border }
+}
+
 // Get consistent color and emoji for a product
-// Custom emojis take priority, then fall back to hash-based assignment
-export function getProductStyle(productName: string, customEmojis?: Record<string, string>): ProductStyle {
+// Custom emojis and colors take priority, then fall back to hash-based assignment
+export function getProductStyle(
+  productName: string, 
+  customEmojis?: Record<string, string>,
+  customColors?: Record<string, string>
+): ProductStyle {
   const hash = hashString(productName);
   
-  // Get color from palette
-  const colorIndex = hash % COLOR_PALETTE.length;
-  const colorClass = COLOR_PALETTE[colorIndex];
+  // Check for custom color first
+  let colorClass = '';
+  let customColor: { bg: string; border: string } | undefined;
+  
+  if (customColors && customColors[productName]) {
+    try {
+      customColor = JSON.parse(customColors[productName]);
+      colorClass = ''; // Will use inline styles instead
+    } catch {
+      const colorIndex = hash % COLOR_PALETTE.length;
+      colorClass = COLOR_PALETTE[colorIndex];
+    }
+  } else {
+    const colorIndex = hash % COLOR_PALETTE.length;
+    colorClass = COLOR_PALETTE[colorIndex];
+  }
   
   // Check for custom emoji first
   if (customEmojis && customEmojis[productName]) {
     return {
       colorClass,
+      customColor,
       emoji: customEmojis[productName],
       isConfusable: false,
     };
@@ -75,6 +142,7 @@ export function getProductStyle(productName: string, customEmojis?: Record<strin
   
   return {
     colorClass,
+    customColor,
     emoji,
     isConfusable: false,
   };
