@@ -96,18 +96,24 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      const mappedOrders: Order[] = (data || []).map(row => ({
-        id: row.id,
-        orderNumber: row.order_number,
-        collectionName: row.customer_name,
-        collectionDate: row.collection_date as '23' | '24',
-        collectionLocation: row.collection_location,
-        pickupTime: (row as any).pickup_time || undefined,
-        products: row.products as { name: string; quantity: number }[],
-        status: row.status as 'pending' | 'collected',
-        collectedAt: row.collected_at || undefined,
-        collectedBy: row.collected_by || undefined,
-      }));
+      const mappedOrders: Order[] = (data || []).map(row => {
+        // Extract day from collection_date (stored as YYYY-12-DD)
+        const dateStr = row.collection_date;
+        const day = dateStr.endsWith('23') ? '23' : '24';
+        
+        return {
+          id: row.id,
+          orderNumber: row.order_number,
+          collectionName: row.customer_name,
+          collectionDate: day as '23' | '24',
+          collectionLocation: row.collection_location,
+          pickupTime: (row as any).pickup_time || undefined,
+          products: row.products as { name: string; quantity: number }[],
+          status: row.status as 'pending' | 'collected',
+          collectedAt: row.collected_at || undefined,
+          collectedBy: row.collected_by || undefined,
+        };
+      });
 
       setOrders(mappedOrders);
     } catch (error) {
@@ -154,11 +160,15 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       await supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
       // Insert new orders one by one to avoid type issues
+      const currentYear = new Date().getFullYear();
       for (const order of newOrders) {
+        // Convert '23' or '24' to proper date format (December 23/24 of current year)
+        const collectionDateStr = `${currentYear}-12-${order.collectionDate}`;
+        
         const { error } = await supabase.from('orders').insert({
           order_number: order.orderNumber,
           customer_name: order.collectionName,
-          collection_date: order.collectionDate,
+          collection_date: collectionDateStr,
           collection_location: order.collectionLocation,
           pickup_time: order.pickupTime || null,
           products: JSON.parse(JSON.stringify(order.products)),
@@ -190,10 +200,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
+      const currentYear = new Date().getFullYear();
+      const collectionDateStr = `${currentYear}-12-${order.collectionDate}`;
+      
       const { error } = await supabase.from('orders').insert({
         order_number: order.orderNumber,
         customer_name: order.collectionName,
-        collection_date: order.collectionDate,
+        collection_date: collectionDateStr,
         collection_location: order.collectionLocation,
         pickup_time: order.pickupTime || null,
         products: JSON.parse(JSON.stringify(order.products)),
