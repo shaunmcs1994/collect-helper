@@ -23,7 +23,7 @@ interface OrderCardProps {
 export function OrderCard({ order }: OrderCardProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showRevertConfirmation, setShowRevertConfirmation] = useState(false);
-  const { markAsCollected, markAsPending, productEmojis } = useOrders();
+  const { markAsCollected, markAsPending, productEmojis, getDisplayName } = useOrders();
 
   const handleMarkCollected = () => {
     markAsCollected(order.id);
@@ -140,7 +140,7 @@ export function OrderCard({ order }: OrderCardProps) {
           <div className="p-3 bg-success/10 rounded-lg mb-4 border border-success/20">
             <p className="text-base text-success font-medium">
               ✓ Collected at {new Date(order.collectedAt).toLocaleString()}
-              {order.collectedBy && ` by ${order.collectedBy}`}
+              {order.collectedBy && ` by ${getDisplayName(order.collectedBy)}`}
             </p>
           </div>
         )}
