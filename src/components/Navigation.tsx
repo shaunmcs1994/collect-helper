@@ -9,11 +9,22 @@ import {
   Shield,
   Printer,
   Menu,
-  X
+  X,
+  LogOut,
+  User
 } from 'lucide-react';
 import { useState } from 'react';
 import { useOrders } from '@/context/OrderContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const navItems = [
   { path: '/', label: 'Order Lookup', icon: Search },
@@ -29,7 +40,12 @@ export function Navigation() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { getRemainingCount, orders } = useOrders();
+  const { user, displayName, userRole, signOut } = useAuth();
   const remaining = getRemainingCount();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <>
@@ -39,6 +55,35 @@ export function Navigation() {
           <h1 className="text-2xl font-bold text-sidebar-foreground">🐝 Buzzy Bee</h1>
           <p className="text-sm text-muted-foreground mt-1">Christmas Collections</p>
         </div>
+
+        {/* User info */}
+        {user && (
+          <div className="p-4 border-b border-sidebar-border">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start gap-2 h-auto p-2">
+                  <User className="w-4 h-4" />
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-sm font-medium truncate max-w-[150px]">
+                      {displayName || user.email}
+                    </span>
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {userRole || 'Staff'}
+                    </span>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
 
         {/* Countdown */}
         {orders.length > 0 && (
@@ -85,14 +130,40 @@ export function Navigation() {
               <p className="text-sm text-primary font-medium">{remaining} remaining</p>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="h-12 w-12"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-12 w-12">
+                    <User className="w-6 h-6" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span>{displayName || user.email}</span>
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {userRole || 'Staff'}
+                      </span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="h-12 w-12"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
