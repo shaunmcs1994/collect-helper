@@ -22,6 +22,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<'admin' | 'collector' | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
 
+  // Session keepalive - refresh every 10 minutes to prevent timeout
+  useEffect(() => {
+    if (!session) return;
+
+    const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+
+    const refreshSession = async () => {
+      try {
+        const { error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.error('Session refresh failed:', error);
+        }
+      } catch (error) {
+        console.error('Session refresh error:', error);
+      }
+    };
+
+    // Periodic refresh while app is open
+    const intervalId = setInterval(refreshSession, REFRESH_INTERVAL);
+
+    // Refresh when tab becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshSession();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [session]);
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
