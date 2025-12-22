@@ -106,6 +106,9 @@ export function OrderCard({ order }: OrderCardProps) {
             {order.products.map((product, index) => {
               const style = getProductStyle(product.name, productEmojis);
               const warning = getConfusableWarning(product.name);
+              const isMultiple = product.quantity > 1;
+              // Clean product name - remove trailing quantity patterns like "- 2" or "-2"
+              const cleanProductName = product.name.replace(/\s*[-–]\s*\d+\s*$/, '').trim();
               
               return (
                 <li
@@ -115,13 +118,17 @@ export function OrderCard({ order }: OrderCardProps) {
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">{style.emoji}</span>
                     <div>
-                      <span className="text-lg font-bold">{product.name}</span>
+                      <span className="text-lg font-bold">{cleanProductName}</span>
                       {warning && (
                         <p className="text-sm text-warning-foreground font-medium">{warning}</p>
                       )}
                     </div>
                   </div>
-                  <span className="text-2xl font-bold text-primary bg-primary/10 px-4 py-1 rounded-full">
+                  <span className={`text-2xl font-bold px-4 py-1 rounded-full ${
+                    isMultiple 
+                      ? 'text-red-600 bg-red-100 border-2 border-red-300' 
+                      : 'text-primary bg-primary/10'
+                  }`}>
                     ×{product.quantity}
                   </span>
                 </li>
@@ -186,6 +193,8 @@ export function OrderCard({ order }: OrderCardProps) {
                   {order.products.map((product, index) => {
                     const style = getProductStyle(product.name, productEmojis);
                     const warning = getConfusableWarning(product.name);
+                    const isMultiple = product.quantity > 1;
+                    const cleanProductName = product.name.replace(/\s*[-–]\s*\d+\s*$/, '').trim();
                     
                     return (
                       <div 
@@ -195,9 +204,13 @@ export function OrderCard({ order }: OrderCardProps) {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <span className="text-3xl">{style.emoji}</span>
-                            <span className="text-xl font-bold text-foreground">{product.name}</span>
+                            <span className="text-xl font-bold text-foreground">{cleanProductName}</span>
                           </div>
-                          <span className="text-2xl font-bold text-primary">×{product.quantity}</span>
+                          <span className={`text-2xl font-bold px-4 py-1 rounded-full ${
+                            isMultiple 
+                              ? 'text-red-600 bg-red-100 border-2 border-red-300' 
+                              : 'text-primary'
+                          }`}>×{product.quantity}</span>
                         </div>
                         {warning && (
                           <div className="mt-2 flex items-center gap-2 text-warning-foreground">
