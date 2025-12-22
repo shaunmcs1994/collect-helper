@@ -102,6 +102,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         collectionName: row.customer_name,
         collectionDate: row.collection_date as '23' | '24',
         collectionLocation: row.collection_location,
+        pickupTime: (row as any).pickup_time || undefined,
         products: row.products as { name: string; quantity: number }[],
         status: row.status as 'pending' | 'collected',
         collectedAt: row.collected_at || undefined,
@@ -159,11 +160,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           customer_name: order.collectionName,
           collection_date: order.collectionDate,
           collection_location: order.collectionLocation,
+          pickup_time: order.pickupTime || null,
           products: JSON.parse(JSON.stringify(order.products)),
           status: order.status,
           collected_at: order.collectedAt || null,
           collected_by: order.collectedBy ? user.id : null,
-        });
+        } as any);
         
         if (error) throw error;
       }
@@ -193,9 +195,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         customer_name: order.collectionName,
         collection_date: order.collectionDate,
         collection_location: order.collectionLocation,
+        pickup_time: order.pickupTime || null,
         products: JSON.parse(JSON.stringify(order.products)),
         status: order.status,
-      });
+      } as any);
 
       if (error) throw error;
     } catch (error) {

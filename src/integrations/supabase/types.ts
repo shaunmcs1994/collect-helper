@@ -24,6 +24,7 @@ export type Database = {
           customer_name: string
           id: string
           order_number: string
+          pickup_time: string | null
           products: Json
           status: string
           updated_at: string
@@ -37,6 +38,7 @@ export type Database = {
           customer_name: string
           id?: string
           order_number: string
+          pickup_time?: string | null
           products?: Json
           status?: string
           updated_at?: string
@@ -50,6 +52,7 @@ export type Database = {
           customer_name?: string
           id?: string
           order_number?: string
+          pickup_time?: string | null
           products?: Json
           status?: string
           updated_at?: string
