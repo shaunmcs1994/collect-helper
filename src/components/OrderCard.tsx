@@ -117,6 +117,13 @@ export function OrderCard({ order }: OrderCardProps) {
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">{style.emoji}</span>
+                    <span className={`text-2xl font-bold px-4 py-1 rounded-full ${
+                      isMultiple 
+                        ? 'text-red-600 bg-red-100 border-2 border-red-300' 
+                        : 'text-primary bg-primary/10'
+                    }`}>
+                      ×{product.quantity}
+                    </span>
                     <div>
                       <span className="text-lg font-bold">{cleanProductName}</span>
                       {warning && (
@@ -124,13 +131,6 @@ export function OrderCard({ order }: OrderCardProps) {
                       )}
                     </div>
                   </div>
-                  <span className={`text-2xl font-bold px-4 py-1 rounded-full ${
-                    isMultiple 
-                      ? 'text-red-600 bg-red-100 border-2 border-red-300' 
-                      : 'text-primary bg-primary/10'
-                  }`}>
-                    ×{product.quantity}
-                  </span>
                 </li>
               );
             })}
@@ -201,16 +201,14 @@ export function OrderCard({ order }: OrderCardProps) {
                         key={`confirm-${order.id}-${index}`}
                         className={`p-3 rounded-lg border-2 ${style.colorClass}`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-3xl">{style.emoji}</span>
-                            <span className="text-xl font-bold text-foreground">{cleanProductName}</span>
-                          </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">{style.emoji}</span>
                           <span className={`text-2xl font-bold px-4 py-1 rounded-full ${
                             isMultiple 
                               ? 'text-red-600 bg-red-100 border-2 border-red-300' 
                               : 'text-primary'
                           }`}>×{product.quantity}</span>
+                          <span className="text-xl font-bold text-foreground">{cleanProductName}</span>
                         </div>
                         {warning && (
                           <div className="mt-2 flex items-center gap-2 text-warning-foreground">
