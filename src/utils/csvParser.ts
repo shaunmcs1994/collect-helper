@@ -7,6 +7,7 @@ interface CSVRow {
   phoneNumber: string;
   collectionDate: string;
   collectionLocation: string;
+  pickupTime: string;
   productName: string;
   quantity: string;
 }
@@ -76,6 +77,17 @@ const COLUMN_MAPPINGS: Record<string, keyof CSVRow> = {
   'pickup location': 'collectionLocation',
   'shipping city': 'collectionLocation',
   'billing city': 'collectionLocation',
+  
+  // Pickup time variations
+  'pickup time': 'pickupTime',
+  'pickuptime': 'pickupTime',
+  'pickup_time': 'pickupTime',
+  'collection time': 'pickupTime',
+  'collectiontime': 'pickupTime',
+  'collection_time': 'pickupTime',
+  'time': 'pickupTime',
+  'time slot': 'pickupTime',
+  'timeslot': 'pickupTime',
   
   // Product name variations (Shopify line item format)
   'product name': 'productName',
@@ -255,6 +267,7 @@ export function parseCSV(csvContent: string): ParseResult {
       row.phoneNumber = row.phoneNumber?.trim() || lastOrderData.phoneNumber;
       row.collectionDate = row.collectionDate?.trim() || lastOrderData.collectionDate;
       row.collectionLocation = row.collectionLocation?.trim() || lastOrderData.collectionLocation;
+      row.pickupTime = row.pickupTime?.trim() || lastOrderData.pickupTime;
     }
     
     // Skip if still no order number
@@ -310,6 +323,7 @@ export function parseCSV(csvContent: string): ParseResult {
       phoneNumber: row.phoneNumber?.trim() || undefined,
       collectionDate,
       collectionLocation: row.collectionLocation?.trim() || 'Unknown',
+      pickupTime: row.pickupTime?.trim() || undefined,
       products: [product],
       status: 'pending',
     };
@@ -343,6 +357,7 @@ export function exportOrdersToCSV(orders: Order[]): string {
     'Phone Number',
     'Collection Date',
     'Collection Location',
+    'Pickup Time',
     'Product Name',
     'Quantity',
     'Status',
@@ -358,6 +373,7 @@ export function exportOrdersToCSV(orders: Order[]): string {
       order.phoneNumber || '',
       `December ${order.collectionDate}`,
       order.collectionLocation,
+      order.pickupTime || '',
       product.name,
       product.quantity.toString(),
       order.status,

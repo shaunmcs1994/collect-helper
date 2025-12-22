@@ -11,6 +11,7 @@ export interface Order {
   phoneNumber?: string;
   collectionDate: '23' | '24';
   collectionLocation: string;
+  pickupTime?: string;
   products: Product[];
   status: 'pending' | 'collected';
   collectedAt?: string;

@@ -68,6 +68,7 @@ export function ManualOrderForm() {
   const [collectionDate, setCollectionDate] = useState<'23' | '24'>('23');
   const [collectionLocation, setCollectionLocation] = useState('');
   const [customLocation, setCustomLocation] = useState('');
+  const [pickupTime, setPickupTime] = useState('');
   const [products, setProducts] = useState<ProductEntry[]>([
     { id: crypto.randomUUID(), name: '', quantity: 1 }
   ]);
@@ -97,6 +98,7 @@ export function ManualOrderForm() {
     setCollectionDate('23');
     setCollectionLocation('');
     setCustomLocation('');
+    setPickupTime('');
     setProducts([{ id: crypto.randomUUID(), name: '', quantity: 1 }]);
   };
 
@@ -152,6 +154,7 @@ export function ManualOrderForm() {
       phoneNumber: phoneNumber.trim() || undefined,
       collectionDate,
       collectionLocation: finalLocation.trim(),
+      pickupTime: pickupTime.trim() || undefined,
       products: validProducts.map(p => ({
         name: p.name.trim(),
         quantity: p.quantity,
@@ -272,6 +275,18 @@ export function ManualOrderForm() {
             />
           </div>
         )}
+
+        {/* Pickup Time */}
+        <div className="space-y-2">
+          <Label htmlFor="pickupTime" className="text-base">Pickup Time (optional)</Label>
+          <Input
+            id="pickupTime"
+            value={pickupTime}
+            onChange={(e) => setPickupTime(e.target.value)}
+            placeholder="e.g. 10:00 AM, Morning, 2-4pm"
+            className="text-lg py-6"
+          />
+        </div>
 
         {/* Products Section */}
         <div className="space-y-4">
