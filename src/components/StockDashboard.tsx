@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { StockItem } from '@/types/order';
 
 export function StockDashboard() {
-  const { orders, productEmojis, setProductEmoji } = useOrders();
+  const { orders, productEmojis, productColors, setProductEmoji, setProductColor } = useOrders();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeLocation, setActiveLocation] = useState<string>('all');
 
@@ -211,19 +211,25 @@ export function StockDashboard() {
                 </p>
               ) : (
                 filteredStockItems.map((item) => {
-                  const style = getProductStyle(item.productName, productEmojis);
+                  const style = getProductStyle(item.productName, productEmojis, productColors);
                   
                   return (
                     <div
                       key={item.productName}
-                      className={`p-4 rounded-lg border-2 ${style.colorClass}`}
+                      className={`p-4 rounded-lg border-2 ${style.customColor ? '' : style.colorClass}`}
+                      style={style.customColor ? { 
+                        backgroundColor: style.customColor.bg, 
+                        borderColor: style.customColor.border 
+                      } : undefined}
                     >
                       <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="flex items-center gap-2">
                           <EmojiPicker
                             currentEmoji={style.emoji}
+                            currentColor={style.customColor}
                             productName={item.productName}
-                            onSelect={(emoji) => setProductEmoji(item.productName, emoji)}
+                            onSelectEmoji={(emoji) => setProductEmoji(item.productName, emoji)}
+                            onSelectColor={(color) => setProductColor(item.productName, color)}
                           />
                           <h4 className="text-lg font-semibold">{item.productName}</h4>
                         </div>

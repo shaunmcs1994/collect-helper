@@ -61,6 +61,7 @@ export type Database = {
       }
       product_emojis: {
         Row: {
+          color: string | null
           created_at: string
           emoji: string
           id: string
@@ -68,6 +69,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           emoji: string
           id?: string
@@ -75,6 +77,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           emoji?: string
           id?: string

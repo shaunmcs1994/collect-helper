@@ -23,7 +23,7 @@ interface OrderCardProps {
 export function OrderCard({ order }: OrderCardProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showRevertConfirmation, setShowRevertConfirmation] = useState(false);
-  const { markAsCollected, markAsPending, productEmojis, getDisplayName } = useOrders();
+  const { markAsCollected, markAsPending, productEmojis, productColors, getDisplayName } = useOrders();
 
   const handleMarkCollected = () => {
     markAsCollected(order.id);
@@ -104,14 +104,18 @@ export function OrderCard({ order }: OrderCardProps) {
           </div>
           <ul className="space-y-2">
             {order.products.map((product, index) => {
-              const style = getProductStyle(product.name, productEmojis);
+              const style = getProductStyle(product.name, productEmojis, productColors);
               const warning = getConfusableWarning(product.name);
               const isMultiple = product.quantity > 1;
               
               return (
                 <li
                   key={`${order.id}-${index}`}
-                  className={`flex items-center justify-between p-3 rounded-lg border-2 ${style.colorClass}`}
+                  className={`flex items-center justify-between p-3 rounded-lg border-2 ${style.customColor ? '' : style.colorClass}`}
+                  style={style.customColor ? { 
+                    backgroundColor: style.customColor.bg, 
+                    borderColor: style.customColor.border 
+                  } : undefined}
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">{style.emoji}</span>
@@ -189,14 +193,18 @@ export function OrderCard({ order }: OrderCardProps) {
                     Verify these products:
                   </p>
                   {order.products.map((product, index) => {
-                    const style = getProductStyle(product.name, productEmojis);
+                    const style = getProductStyle(product.name, productEmojis, productColors);
                     const warning = getConfusableWarning(product.name);
                     const isMultiple = product.quantity > 1;
                     
                     return (
                       <div 
                         key={`confirm-${order.id}-${index}`}
-                        className={`p-3 rounded-lg border-2 ${style.colorClass}`}
+                        className={`p-3 rounded-lg border-2 ${style.customColor ? '' : style.colorClass}`}
+                        style={style.customColor ? { 
+                          backgroundColor: style.customColor.bg, 
+                          borderColor: style.customColor.border 
+                        } : undefined}
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-3xl">{style.emoji}</span>
