@@ -111,7 +111,7 @@ export function StockDashboard() {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="grid grid-cols-5 gap-3 text-center">
                   <div className="p-2 bg-card rounded">
                     <p className="text-2xl font-bold">{item.totalOrdered}</p>
                     <p className="text-xs text-muted-foreground uppercase">Ordered</p>
@@ -125,6 +125,14 @@ export function StockDashboard() {
                       {item.remaining}
                     </p>
                     <p className="text-xs text-muted-foreground uppercase">Remaining</p>
+                  </div>
+                  <div className="p-2 bg-primary/10 rounded">
+                    <p className="text-2xl font-bold text-primary">{item.remaining23}</p>
+                    <p className="text-xs text-muted-foreground uppercase">23rd</p>
+                  </div>
+                  <div className="p-2 bg-primary/10 rounded">
+                    <p className="text-2xl font-bold text-primary">{item.remaining24}</p>
+                    <p className="text-xs text-muted-foreground uppercase">24th</p>
                   </div>
                 </div>
                 

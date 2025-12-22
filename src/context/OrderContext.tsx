@@ -186,11 +186,20 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           totalOrdered: 0,
           totalCollected: 0,
           remaining: 0,
+          remaining23: 0,
+          remaining24: 0,
         };
 
         existing.totalOrdered += product.quantity;
         if (order.status === 'collected') {
           existing.totalCollected += product.quantity;
+        } else {
+          // Track remaining by date for pending orders
+          if (order.collectionDate === '23') {
+            existing.remaining23 += product.quantity;
+          } else if (order.collectionDate === '24') {
+            existing.remaining24 += product.quantity;
+          }
         }
         existing.remaining = existing.totalOrdered - existing.totalCollected;
 

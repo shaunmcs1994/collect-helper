@@ -22,6 +22,8 @@ export interface StockItem {
   totalOrdered: number;
   totalCollected: number;
   remaining: number;
+  remaining23: number;
+  remaining24: number;
 }
 
 export interface Backup {
