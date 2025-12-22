@@ -145,15 +145,15 @@ export function BackupPanel() {
         </div>
       </Card>
 
-      {/* Auto-save Info */}
+      {/* Cloud Sync Info */}
       <Card className="p-5 bg-success/5 border-success/20">
         <div className="flex items-start gap-3">
           <Clock className="w-6 h-6 text-success flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-bold text-success mb-1">Auto-Backup Active</h4>
+            <h4 className="font-bold text-success mb-1">Cloud Sync Active</h4>
             <p className="text-muted-foreground">
-              Your data is automatically saved every 5 minutes and stored locally.
-              Up to 10 backups are kept.
+              Your data is automatically saved to the cloud in real-time and syncs across all devices.
+              Use manual backups below for additional safety.
             </p>
           </div>
         </div>
@@ -161,11 +161,11 @@ export function BackupPanel() {
 
       {/* Backup History */}
       <Card className="p-5">
-        <h3 className="text-lg font-bold mb-4">Backup History</h3>
+        <h3 className="text-lg font-bold mb-4">Manual Backup History</h3>
         
         {backups.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
-            No backups yet. Backups are created automatically every 5 minutes.
+            No manual backups yet. Click "Create Backup Now" to save a local copy.
           </p>
         ) : (
           <div className="space-y-3">
