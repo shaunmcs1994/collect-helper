@@ -107,8 +107,6 @@ export function OrderCard({ order }: OrderCardProps) {
               const style = getProductStyle(product.name, productEmojis);
               const warning = getConfusableWarning(product.name);
               const isMultiple = product.quantity > 1;
-              // Clean product name - remove trailing quantity patterns like "- 2" or "-2"
-              const cleanProductName = product.name.replace(/\s*[-–]\s*\d+\s*$/, '').trim();
               
               return (
                 <li
@@ -125,7 +123,7 @@ export function OrderCard({ order }: OrderCardProps) {
                       ×{product.quantity}
                     </span>
                     <div>
-                      <span className="text-lg font-bold">{cleanProductName}</span>
+                      <span className="text-lg font-bold">{product.name}</span>
                       {warning && (
                         <p className="text-sm text-warning-foreground font-medium">{warning}</p>
                       )}
@@ -194,7 +192,6 @@ export function OrderCard({ order }: OrderCardProps) {
                     const style = getProductStyle(product.name, productEmojis);
                     const warning = getConfusableWarning(product.name);
                     const isMultiple = product.quantity > 1;
-                    const cleanProductName = product.name.replace(/\s*[-–]\s*\d+\s*$/, '').trim();
                     
                     return (
                       <div 
@@ -208,7 +205,7 @@ export function OrderCard({ order }: OrderCardProps) {
                               ? 'text-red-600 bg-red-100 border-2 border-red-300' 
                               : 'text-primary'
                           }`}>×{product.quantity}</span>
-                          <span className="text-xl font-bold text-foreground">{cleanProductName}</span>
+                          <span className="text-xl font-bold text-foreground">{product.name}</span>
                         </div>
                         {warning && (
                           <div className="mt-2 flex items-center gap-2 text-warning-foreground">
