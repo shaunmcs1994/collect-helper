@@ -9,6 +9,7 @@ interface OrderContextType {
   backups: Backup[];
   isLoading: boolean;
   productEmojis: Record<string, string>;
+  getDisplayName: (userId: string) => string;
   importOrders: (orders: Order[]) => Promise<void>;
   addOrder: (order: Order) => Promise<void>;
   markAsCollected: (orderId: string, collectedBy?: string) => Promise<void>;
@@ -33,6 +34,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [productEmojis, setProductEmojis] = useState<Record<string, string>>({});
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const { user, displayName } = useAuth();
 
@@ -47,6 +49,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
     loadOrders();
     loadProductEmojis();
+    loadProfiles();
     
     // Set up real-time subscriptions
     const ordersChannel = supabase
@@ -146,6 +149,31 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       console.error('Error loading product emojis:', error);
     }
   };
+
+  const loadProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, display_name');
+
+      if (error) throw error;
+
+      const profileMap: Record<string, string> = {};
+      (data || []).forEach(row => {
+        if (row.display_name) {
+          profileMap[row.user_id] = row.display_name;
+        }
+      });
+
+      setProfiles(profileMap);
+    } catch (error) {
+      console.error('Error loading profiles:', error);
+    }
+  };
+
+  const getDisplayName = useCallback((userId: string): string => {
+    return profiles[userId] || 'Staff';
+  }, [profiles]);
 
   const importOrders = useCallback(async (newOrders: Order[]) => {
     if (!user) return;
@@ -474,6 +502,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       backups,
       isLoading,
       productEmojis,
+      getDisplayName,
       importOrders,
       addOrder,
       markAsCollected,
