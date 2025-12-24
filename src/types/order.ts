@@ -25,6 +25,8 @@ export interface StockItem {
   remaining: number;
   remaining23: number;
   remaining24: number;
+  remainingWilmslow: number;
+  remainingManchester: number;
 }
 
 export interface Backup {

@@ -35,6 +35,8 @@ export function StockDashboard() {
           remaining: 0,
           remaining23: 0,
           remaining24: 0,
+          remainingWilmslow: 0,
+          remainingManchester: 0,
         };
 
         existing.totalOrdered += product.quantity;
@@ -45,6 +47,12 @@ export function StockDashboard() {
             existing.remaining23 += product.quantity;
           } else if (order.collectionDate === '24') {
             existing.remaining24 += product.quantity;
+          }
+          // Track remaining by location
+          if (order.collectionLocation.toLowerCase() === 'wilmslow') {
+            existing.remainingWilmslow += product.quantity;
+          } else if (order.collectionLocation.toLowerCase() === 'manchester') {
+            existing.remainingManchester += product.quantity;
           }
         }
         existing.remaining = existing.totalOrdered - existing.totalCollected;
@@ -79,12 +87,14 @@ export function StockDashboard() {
   );
 
   const exportStockList = () => {
-    const headers = ['Product', 'Ordered', 'Collected', 'Remaining', '23rd Remaining', '24th Remaining'];
+    const headers = ['Product', 'Ordered', 'Collected', 'Remaining', 'Wilmslow', 'Manchester', '23rd', '24th'];
     const rows = stockItems.map(item => [
       item.productName,
       item.totalOrdered,
       item.totalCollected,
       item.remaining,
+      item.remainingWilmslow,
+      item.remainingManchester,
       item.remaining23,
       item.remaining24
     ]);
@@ -246,27 +256,35 @@ export function StockDashboard() {
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-5 gap-3 text-center">
+                      <div className="grid grid-cols-7 gap-2 text-center">
                         <div className="p-2 bg-card rounded">
-                          <p className="text-2xl font-bold">{item.totalOrdered}</p>
+                          <p className="text-xl font-bold">{item.totalOrdered}</p>
                           <p className="text-xs text-muted-foreground uppercase">Ordered</p>
                         </div>
                         <div className="p-2 bg-success/10 rounded">
-                          <p className="text-2xl font-bold text-success">{item.totalCollected}</p>
+                          <p className="text-xl font-bold text-success">{item.totalCollected}</p>
                           <p className="text-xs text-muted-foreground uppercase">Collected</p>
                         </div>
                         <div className={`p-2 rounded ${item.remaining > 0 ? 'bg-warning/10' : 'bg-success/10'}`}>
-                          <p className={`text-2xl font-bold ${item.remaining > 0 ? 'text-warning-foreground' : 'text-success'}`}>
+                          <p className={`text-xl font-bold ${item.remaining > 0 ? 'text-warning-foreground' : 'text-success'}`}>
                             {item.remaining}
                           </p>
                           <p className="text-xs text-muted-foreground uppercase">Remaining</p>
                         </div>
+                        <div className="p-2 bg-blue-500/10 rounded">
+                          <p className="text-xl font-bold text-blue-600">{item.remainingWilmslow}</p>
+                          <p className="text-xs text-muted-foreground uppercase">Wilmslow</p>
+                        </div>
+                        <div className="p-2 bg-purple-500/10 rounded">
+                          <p className="text-xl font-bold text-purple-600">{item.remainingManchester}</p>
+                          <p className="text-xs text-muted-foreground uppercase">Manchester</p>
+                        </div>
                         <div className="p-2 bg-primary/10 rounded">
-                          <p className="text-2xl font-bold text-primary">{item.remaining23}</p>
+                          <p className="text-xl font-bold text-primary">{item.remaining23}</p>
                           <p className="text-xs text-muted-foreground uppercase">23rd</p>
                         </div>
                         <div className="p-2 bg-primary/10 rounded">
-                          <p className="text-2xl font-bold text-primary">{item.remaining24}</p>
+                          <p className="text-xl font-bold text-primary">{item.remaining24}</p>
                           <p className="text-xs text-muted-foreground uppercase">24th</p>
                         </div>
                       </div>

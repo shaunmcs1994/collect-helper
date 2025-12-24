@@ -367,6 +367,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           remaining: 0,
           remaining23: 0,
           remaining24: 0,
+          remainingWilmslow: 0,
+          remainingManchester: 0,
         };
 
         existing.totalOrdered += product.quantity;
@@ -377,6 +379,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
             existing.remaining23 += product.quantity;
           } else if (order.collectionDate === '24') {
             existing.remaining24 += product.quantity;
+          }
+          // Track remaining by location
+          if (order.collectionLocation.toLowerCase() === 'wilmslow') {
+            existing.remainingWilmslow += product.quantity;
+          } else if (order.collectionLocation.toLowerCase() === 'manchester') {
+            existing.remainingManchester += product.quantity;
           }
         }
         existing.remaining = existing.totalOrdered - existing.totalCollected;
