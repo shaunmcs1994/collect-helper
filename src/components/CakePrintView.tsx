@@ -4,7 +4,16 @@ import { Order } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Calendar, Printer, ArrowLeft, MapPin, Package, Clock, User, Hash } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+
+// Format ISO date to UK format DD/MM/YYYY
+function formatDateUK(isoDate: string): string {
+  try {
+    return format(parseISO(isoDate), 'dd/MM/yyyy');
+  } catch {
+    return isoDate;
+  }
+}
 
 interface CakeCardProps {
   order: Order;
@@ -25,7 +34,7 @@ function CakeCard({ order }: CakeCardProps) {
         </div>
         <div className="text-right">
           <p className="text-lg font-bold">#{order.orderNumber}</p>
-          <p className="text-lg">Dec {order.collectionDate}</p>
+          <p className="text-lg">{formatDateUK(order.collectionDate)}</p>
         </div>
       </div>
       
@@ -151,11 +160,11 @@ export function CakePrintView() {
           <header className="text-center mb-6 print:mb-4">
             <h1 className="text-2xl font-bold">Daily Cake Collection Sheet</h1>
             <p className="text-lg">
-              {selectedDate !== 'all' ? `December ${selectedDate}` : 'All Dates'}
+              {selectedDate !== 'all' ? formatDateUK(selectedDate) : 'All Dates'}
               {selectedLocation !== 'all' && ` • ${selectedLocation}`}
             </p>
             <p className="text-muted-foreground">
-              Generated: {format(new Date(), 'PPpp')} • {filteredOrders.length} orders
+              Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {filteredOrders.length} orders
             </p>
           </header>
           
@@ -203,7 +212,7 @@ export function CakePrintView() {
                 onClick={() => setSelectedDate(date)}
                 size="lg"
               >
-                December {date}
+                {formatDateUK(date)}
               </Button>
             ))}
           </div>

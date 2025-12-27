@@ -73,7 +73,7 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
       <Card className="w-full max-w-2xl max-h-[80vh] overflow-auto p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold">{format(date, 'EEEE, MMMM d, yyyy')}</h2>
+            <h2 className="text-2xl font-bold">{format(date, 'EEEE, dd/MM/yyyy')}</h2>
             <p className="text-muted-foreground">{orders.length} orders • {pendingOrders.length} pending</p>
           </div>
           <Button variant="outline" onClick={onClose}>Close</Button>

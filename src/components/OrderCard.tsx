@@ -15,6 +15,16 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Check, MapPin, Calendar, Package, Hash, Phone, Undo2, AlertTriangle } from 'lucide-react';
 import { getProductStyle, getConfusableWarning } from '@/utils/productColors';
+import { format, parseISO } from 'date-fns';
+
+// Format ISO date to UK format DD/MM/YYYY
+function formatDateUK(isoDate: string): string {
+  try {
+    return format(parseISO(isoDate), 'dd/MM/yyyy');
+  } catch {
+    return isoDate;
+  }
+}
 
 interface OrderCardProps {
   order: Order;
@@ -66,7 +76,7 @@ export function OrderCard({ order }: OrderCardProps) {
         <div className="flex flex-wrap gap-4 mb-5 text-base">
           <div className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg">
             <Calendar className="w-5 h-5 text-primary" />
-            <span className="font-medium">December {order.collectionDate}</span>
+            <span className="font-medium">{formatDateUK(order.collectionDate)}</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg">
             <MapPin className="w-5 h-5 text-primary" />
