@@ -3,11 +3,14 @@ import { Order, Backup, StockItem } from '@/types/order';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { format } from 'date-fns';
 
 interface OrderContextType {
   orders: Order[];
   backups: Backup[];
   isLoading: boolean;
+  isSyncing: boolean;
+  lastSyncTime: string | null;
   productEmojis: Record<string, string>;
   productColors: Record<string, string>;
   getDisplayName: (userId: string) => string;
@@ -18,14 +21,16 @@ interface OrderContextType {
   getOrdersByStatus: (status: 'pending' | 'collected') => Order[];
   searchOrders: (query: string) => Order[];
   getStockSummary: () => StockItem[];
-  getRemainingCount: (date?: '23' | '24') => number;
+  getRemainingCount: (date?: string) => number;
   getLocations: () => string[];
+  getAvailableDates: () => string[];
   setProductEmoji: (productName: string, emoji: string) => Promise<void>;
   setProductColor: (productName: string, color: { bg: string; border: string }) => Promise<void>;
   createBackup: () => void;
   restoreBackup: (backupId: string) => void;
   downloadBackup: () => void;
   clearAllData: () => Promise<void>;
+  syncWithShopify: () => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -39,6 +44,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [productColors, setProductColors] = useState<Record<string, string>>({});
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const { user, displayName } = useAuth();
 
   // Load data from Supabase on mount and when user changes
@@ -103,15 +110,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       const mappedOrders: Order[] = (data || []).map(row => {
-        // Extract day from collection_date (stored as YYYY-12-DD)
-        const dateStr = row.collection_date;
-        const day = dateStr.endsWith('23') ? '23' : '24';
-        
         return {
           id: row.id,
           orderNumber: row.order_number,
           collectionName: row.customer_name,
-          collectionDate: day as '23' | '24',
+          collectionDate: row.collection_date, // Now stored as full date YYYY-MM-DD
           collectionLocation: row.collection_location,
           pickupTime: (row as any).pickup_time || undefined,
           products: row.products as { name: string; quantity: number }[],
@@ -195,11 +198,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       // Clear existing orders
       await supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
-      // Insert new orders one by one to avoid type issues
-      const currentYear = new Date().getFullYear();
+      // Insert new orders
       for (const order of newOrders) {
-        // Convert '23' or '24' to proper date format (December 23/24 of current year)
-        const collectionDateStr = `${currentYear}-12-${order.collectionDate}`;
+        // Handle both old format ('23', '24') and new format (YYYY-MM-DD)
+        let collectionDateStr = order.collectionDate;
+        if (collectionDateStr === '23' || collectionDateStr === '24') {
+          const currentYear = new Date().getFullYear();
+          collectionDateStr = `${currentYear}-12-${collectionDateStr}`;
+        }
         
         const { error } = await supabase.from('orders').insert({
           order_number: order.orderNumber,
@@ -236,8 +242,12 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      const currentYear = new Date().getFullYear();
-      const collectionDateStr = `${currentYear}-12-${order.collectionDate}`;
+      // Handle both old format ('23', '24') and new format (YYYY-MM-DD)
+      let collectionDateStr = order.collectionDate;
+      if (collectionDateStr === '23' || collectionDateStr === '24') {
+        const currentYear = new Date().getFullYear();
+        collectionDateStr = `${currentYear}-12-${collectionDateStr}`;
+      }
       
       const { error } = await supabase.from('orders').insert({
         order_number: order.orderNumber,
@@ -276,18 +286,38 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
+      // Get the order to check if it has a Shopify order ID
+      const order = orders.find(o => o.id === orderId);
+      
       // Optimistic update for immediate feedback
-      setOrders(prev => prev.map(order => {
-        if (order.id === orderId && order.status === 'pending') {
+      setOrders(prev => prev.map(o => {
+        if (o.id === orderId && o.status === 'pending') {
           return {
-            ...order,
+            ...o,
             status: 'collected' as const,
             collectedAt: new Date().toISOString(),
             collectedBy: displayName || collectedBy || 'Staff',
           };
         }
-        return order;
+        return o;
       }));
+
+      // If order has Shopify ID, trigger fulfillment in background
+      if (order?.shopifyOrderId) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          await supabase.functions.invoke('shopify-fulfill', {
+            body: { 
+              orderNumber: order.orderNumber,
+              shopifyOrderId: order.shopifyOrderId 
+            },
+            headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined
+          });
+        } catch (fulfillError) {
+          console.error('Shopify fulfillment failed:', fulfillError);
+          // Don't show error to user - collection still succeeded locally
+        }
+      }
     } catch (error) {
       console.error('Error marking as collected:', error);
       toast({
@@ -296,7 +326,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
     }
-  }, [user, displayName]);
+  }, [user, displayName, orders]);
 
   const markAsPending = useCallback(async (orderId: string) => {
     if (!user) return;
@@ -357,6 +387,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   const getStockSummary = useCallback((): StockItem[] => {
     const stockMap = new Map<string, StockItem>();
+    const today = format(new Date(), 'yyyy-MM-dd');
 
     orders.forEach(order => {
       order.products.forEach(product => {
@@ -375,9 +406,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         if (order.status === 'collected') {
           existing.totalCollected += product.quantity;
         } else {
-          if (order.collectionDate === '23') {
+          // For backwards compatibility, check if date ends with 23 or 24
+          if (order.collectionDate.endsWith('-23') || order.collectionDate === '23') {
             existing.remaining23 += product.quantity;
-          } else if (order.collectionDate === '24') {
+          } else if (order.collectionDate.endsWith('-24') || order.collectionDate === '24') {
             existing.remaining24 += product.quantity;
           }
           // Track remaining by location
@@ -398,16 +430,28 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     );
   }, [orders]);
 
-  const getRemainingCount = useCallback((date?: '23' | '24') => {
+  const getRemainingCount = useCallback((date?: string) => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
     return orders.filter(order => {
-      const matchesDate = !date || order.collectionDate === date;
-      return order.status === 'pending' && matchesDate;
+      if (!date || date === 'all') return order.status === 'pending';
+      if (date === 'today') return order.status === 'pending' && order.collectionDate === today;
+      // Support old format ('23', '24') for backwards compatibility
+      if (date === '23' || date === '24') {
+        return order.status === 'pending' && order.collectionDate.endsWith(`-${date}`);
+      }
+      return order.status === 'pending' && order.collectionDate === date;
     }).length;
   }, [orders]);
 
   const getLocations = useCallback(() => {
     const locations = new Set(orders.map(o => o.collectionLocation));
     return Array.from(locations).sort();
+  }, [orders]);
+
+  const getAvailableDates = useCallback(() => {
+    const dates = new Set(orders.map(o => o.collectionDate));
+    return Array.from(dates).sort();
   }, [orders]);
 
   const setProductEmoji = useCallback(async (productName: string, emoji: string) => {
@@ -484,6 +528,38 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         description: "Could not save color.",
         variant: "destructive",
       });
+    }
+  }, [user]);
+
+  const syncWithShopify = useCallback(async () => {
+    if (!user) return;
+
+    setIsSyncing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('shopify-sync', {
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined
+      });
+
+      if (error) throw error;
+
+      setLastSyncTime(new Date().toISOString());
+      await loadOrders();
+
+      toast({
+        title: "Sync Complete",
+        description: data?.message || `Synced orders from Shopify.`,
+      });
+    } catch (error) {
+      console.error('Error syncing with Shopify:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Could not sync orders from Shopify.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
     }
   }, [user]);
 
@@ -565,6 +641,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       orders,
       backups,
       isLoading,
+      isSyncing,
+      lastSyncTime,
       productEmojis,
       productColors,
       getDisplayName,
@@ -577,12 +655,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       getStockSummary,
       getRemainingCount,
       getLocations,
+      getAvailableDates,
       setProductEmoji,
       setProductColor,
       createBackup,
       restoreBackup,
       downloadBackup,
       clearAllData,
+      syncWithShopify,
     }}>
       {children}
     </OrderContext.Provider>

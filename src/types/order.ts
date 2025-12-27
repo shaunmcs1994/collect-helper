@@ -9,13 +9,14 @@ export interface Order {
   collectionName: string;
   alternativeName?: string;
   phoneNumber?: string;
-  collectionDate: '23' | '24';
+  collectionDate: string; // ISO date format YYYY-MM-DD
   collectionLocation: string;
   pickupTime?: string;
   products: Product[];
   status: 'pending' | 'collected';
   collectedAt?: string;
   collectedBy?: string;
+  shopifyOrderId?: string; // For Shopify integration
 }
 
 export interface StockItem {
@@ -36,5 +37,6 @@ export interface Backup {
   data: Order[];
 }
 
-export type CollectionDate = '23' | '24' | 'all';
+// Now supports any date string (YYYY-MM-DD) or 'all' or 'today'
+export type CollectionDate = string | 'all' | 'today';
 export type LocationFilter = string | 'all';
