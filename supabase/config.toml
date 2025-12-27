@@ -1,7 +1,7 @@
 project_id = "sruuefrhbnbvmfetomji"
 
 [functions.shopify-sync]
-verify_jwt = true
+verify_jwt = false
 
 [functions.shopify-fulfill]
 verify_jwt = true
