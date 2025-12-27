@@ -5,8 +5,17 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useOrders } from '@/context/OrderContext';
 import { CollectionDate, LocationFilter } from '@/types/order';
 import { CalendarIcon, X } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+
+// Format ISO date to UK format DD/MM/YYYY
+function formatDateUK(isoDate: string): string {
+  try {
+    return format(parseISO(isoDate), 'dd/MM/yyyy');
+  } catch {
+    return isoDate;
+  }
+}
 
 interface OrderFiltersProps {
   dateFilter: CollectionDate;
@@ -39,7 +48,7 @@ export function OrderFilters({
     if (dateFilter === 'all') return 'All Dates';
     if (dateFilter === 'today') return 'Today';
     try {
-      return format(new Date(dateFilter), 'MMM d, yyyy');
+      return formatDateUK(dateFilter);
     } catch {
       return dateFilter;
     }

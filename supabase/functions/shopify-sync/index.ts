@@ -10,6 +10,41 @@ const corsHeaders = {
 const SHOPIFY_STORE_DOMAIN = 'buzzycakes.myshopify.com';
 const SHOPIFY_API_VERSION = '2025-01';
 
+// Parse location from Zapiet tags
+function getLocationFromTags(tags: string[]): string {
+  const upperTags = tags.map(t => t.toUpperCase().trim());
+  if (upperTags.includes('WILM')) return 'Wilmslow';
+  if (upperTags.includes('NQ')) return 'Manchester';
+  return 'Unknown';
+}
+
+// Extract pickup time from tags (HH:MM format)
+function getPickupTimeFromTags(tags: string[]): string | null {
+  const timeTag = tags.find(tag => /^\d{1,2}:\d{2}$/.test(tag.trim()));
+  return timeTag?.trim() || null;
+}
+
+// Extract collection date from tags (DD/MM/YYYY format) and convert to ISO
+function getCollectionDateFromTags(tags: string[]): string | null {
+  // Look for DD/MM/YYYY pattern
+  const dateTag = tags.find(tag => /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(tag.trim()));
+  if (!dateTag) return null;
+  
+  const parts = dateTag.trim().split('/');
+  const day = parts[0].padStart(2, '0');
+  const month = parts[1].padStart(2, '0');
+  const year = parts[2];
+  
+  // Return ISO format YYYY-MM-DD for database storage
+  return `${year}-${month}-${day}`;
+}
+
+// Convert ISO date to UK format for tag matching
+function isoToUkFormat(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-');
+  return `${parseInt(day)}/${parseInt(month)}/${year}`;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -17,7 +52,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Starting Shopify sync...');
+    console.log('Starting Shopify sync with Zapiet tag format...');
     
     // Get Shopify Admin API token from secrets
     const shopifyAccessToken = Deno.env.get('SHOPIFY_ACCESS_TOKEN');
@@ -30,12 +65,12 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get today's date for filtering
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    console.log(`Looking for orders tagged with collection date: ${today}`);
+    // Get today's date in both formats
+    const todayISO = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayUK = isoToUkFormat(todayISO); // D/M/YYYY
+    console.log(`Looking for orders tagged with date: ${todayUK} (UK format)`);
 
     // Fetch orders from Shopify
-    // Looking for orders with tag format: "collection-YYYY-MM-DD"
     const shopifyUrl = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=any&limit=250`;
     
     const shopifyResponse = await fetch(shopifyUrl, {
@@ -55,22 +90,14 @@ serve(async (req) => {
     const allOrders = shopifyData.orders || [];
     console.log(`Fetched ${allOrders.length} orders from Shopify`);
 
-    // Filter orders by collection date tag
-    // Tags can be: "collection-2025-01-15" or just check note_attributes
+    // Filter orders that have a valid date tag (DD/MM/YYYY format)
     const relevantOrders = allOrders.filter((order: any) => {
-      // Check tags for collection date
-      const tags = (order.tags || '').toLowerCase().split(',').map((t: string) => t.trim());
-      const hasCollectionTag = tags.some((tag: string) => 
-        tag.startsWith('collection-') || tag.includes('collection')
-      );
-      
-      // Also check if already fulfilled
-      const isUnfulfilled = order.fulfillment_status === null || order.fulfillment_status === 'unfulfilled';
-      
-      return hasCollectionTag;
+      const tags = (order.tags || '').split(',').map((t: string) => t.trim());
+      const collectionDate = getCollectionDateFromTags(tags);
+      return collectionDate !== null;
     });
 
-    console.log(`Found ${relevantOrders.length} orders with collection tags`);
+    console.log(`Found ${relevantOrders.length} orders with valid date tags`);
 
     // Upsert orders into database
     let syncedCount = 0;
@@ -78,25 +105,20 @@ serve(async (req) => {
 
     for (const shopifyOrder of relevantOrders) {
       try {
-        // Extract collection date from tags
         const tags = (shopifyOrder.tags || '').split(',').map((t: string) => t.trim());
-        const collectionTag = tags.find((tag: string) => tag.toLowerCase().startsWith('collection-'));
         
-        let collectionDate = today; // Default to today
-        if (collectionTag) {
-          // Extract date from tag like "collection-2025-01-15"
-          const datePart = collectionTag.replace(/collection-/i, '');
-          if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-            collectionDate = datePart;
-          }
+        // Extract data from Zapiet tags
+        const collectionDate = getCollectionDateFromTags(tags);
+        if (!collectionDate) {
+          console.log(`Skipping order ${shopifyOrder.name}: no valid date tag`);
+          skippedCount++;
+          continue;
         }
+        
+        const collectionLocation = getLocationFromTags(tags);
+        const pickupTime = getPickupTimeFromTags(tags);
 
-        // Extract location from tags or default
-        const locationTag = tags.find((tag: string) => 
-          tag.toLowerCase() === 'wilmslow' || 
-          tag.toLowerCase() === 'manchester'
-        );
-        const collectionLocation = locationTag || 'Wilmslow';
+        console.log(`Processing order ${shopifyOrder.name}: date=${collectionDate}, location=${collectionLocation}, time=${pickupTime}`);
 
         // Map line items to products
         const products = shopifyOrder.line_items.map((item: any) => ({
@@ -114,10 +136,11 @@ serve(async (req) => {
         if (existingOrder) {
           // Skip if already collected
           if (existingOrder.status === 'collected') {
+            console.log(`Skipping order ${shopifyOrder.name}: already collected`);
             skippedCount++;
             continue;
           }
-          // Update existing order
+          // Update existing order with latest tag data
           await supabase
             .from('orders')
             .update({
@@ -126,10 +149,13 @@ serve(async (req) => {
                 : shopifyOrder.shipping_address?.name || 'Customer',
               collection_date: collectionDate,
               collection_location: collectionLocation,
+              pickup_time: pickupTime,
               products: products,
               updated_at: new Date().toISOString(),
             })
             .eq('id', existingOrder.id);
+          
+          console.log(`Updated order ${shopifyOrder.name}`);
         } else {
           // Insert new order
           const status = shopifyOrder.fulfillment_status === 'fulfilled' ? 'collected' : 'pending';
@@ -143,10 +169,12 @@ serve(async (req) => {
                 : shopifyOrder.shipping_address?.name || 'Customer',
               collection_date: collectionDate,
               collection_location: collectionLocation,
+              pickup_time: pickupTime,
               products: products,
               status: status,
-              pickup_time: null,
             });
+          
+          console.log(`Inserted new order ${shopifyOrder.name}`);
         }
         
         syncedCount++;
