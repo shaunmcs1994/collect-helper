@@ -3,20 +3,26 @@ import { useOrders } from '@/context/OrderContext';
 import { OrderCard } from '@/components/OrderCard';
 import { OrderFilters } from '@/components/OrderFilters';
 import { SearchBar } from '@/components/SearchBar';
+import { ShopifySyncButton } from '@/components/ShopifySyncButton';
 import { CollectionDate, LocationFilter } from '@/types/order';
 import { Clock } from 'lucide-react';
+import { format } from 'date-fns';
 
 export default function PendingOrders() {
-  const [dateFilter, setDateFilter] = useState<CollectionDate>('all');
+  const [dateFilter, setDateFilter] = useState<CollectionDate>('today');
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const { getOrdersByStatus } = useOrders();
+  
+  const today = format(new Date(), 'yyyy-MM-dd');
   
   const pendingOrders = useMemo(() => {
     let orders = getOrdersByStatus('pending');
     
     // Apply filters
-    if (dateFilter !== 'all') {
+    if (dateFilter === 'today') {
+      orders = orders.filter(o => o.collectionDate === today);
+    } else if (dateFilter !== 'all') {
       orders = orders.filter(o => o.collectionDate === dateFilter);
     }
     if (locationFilter !== 'all') {
@@ -37,19 +43,22 @@ export default function PendingOrders() {
     return orders.sort((a, b) => 
       a.collectionName.localeCompare(b.collectionName)
     );
-  }, [getOrdersByStatus, dateFilter, locationFilter, searchQuery]);
+  }, [getOrdersByStatus, dateFilter, locationFilter, searchQuery, today]);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <header>
-        <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-          <Clock className="w-8 h-8 text-warning" />
-          Pending Orders
-        </h1>
-        <p className="text-lg text-muted-foreground">
-          {pendingOrders.length} orders waiting to be collected
-        </p>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+            <Clock className="w-8 h-8 text-warning" />
+            Pending Orders
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            {pendingOrders.length} orders waiting to be collected
+          </p>
+        </div>
+        <ShopifySyncButton />
       </header>
 
       {/* Search */}

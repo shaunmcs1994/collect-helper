@@ -128,15 +128,12 @@ export function OrderCalendar() {
   const [viewMode, setViewMode] = useState<ViewMode>('summary');
   const [selectedDay, setSelectedDay] = useState<{ date: Date; orders: Order[] } | null>(null);
   
-  // Group orders by date - for now using the existing date format, will be updated for year-round support
+  // Group orders by date - now using full ISO dates
   const ordersByDate = useMemo(() => {
     const grouped: Record<string, Order[]> = {};
     
     orders.forEach(order => {
-      // Currently orders have collectionDate as '23' or '24' (December)
-      // When year-round support is added, this will use full ISO dates
-      const year = currentDate.getFullYear();
-      const dateKey = `${year}-12-${order.collectionDate.padStart(2, '0')}`;
+      const dateKey = order.collectionDate; // Already in YYYY-MM-DD format
       
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
@@ -145,7 +142,7 @@ export function OrderCalendar() {
     });
     
     return grouped;
-  }, [orders, currentDate]);
+  }, [orders]);
   
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
