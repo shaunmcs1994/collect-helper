@@ -193,4 +193,27 @@
     border: 1px solid #ccc !important;
     margin-bottom: 1rem;
   }
+
+  /* Cake print specific styles */
+  .cake-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 2px solid black !important;
+    background: white !important;
+    color: black !important;
+    margin-bottom: 1rem;
+  }
+
+  .cake-card-container {
+    page-break-after: always;
+  }
+
+  .cake-card-container:last-child {
+    page-break-after: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 1cm;
+  }
 }
