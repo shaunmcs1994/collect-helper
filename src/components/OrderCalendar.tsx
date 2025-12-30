@@ -230,27 +230,48 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 margin: 8mm;
               }
               
-              /* Reset */
-              html, body {
-                height: auto !important;
-                overflow: visible !important;
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-              
-              /* Hide non-print elements */
-              .print\\:hidden,
-              header.print\\:hidden {
+              /* Hide EVERYTHING by default */
+              body > * {
                 display: none !important;
               }
               
-              /* Print area takes full page */
+              /* Show only the print preview container */
+              body > #root {
+                display: block !important;
+              }
+              
+              #root > * {
+                display: none !important;
+              }
+              
+              /* Target the print preview specifically */
+              .print-preview-wrapper {
+                display: block !important;
+                position: static !important;
+                overflow: visible !important;
+                background: white !important;
+              }
+              
+              .print-preview-wrapper > * {
+                display: none !important;
+              }
+              
               #cake-print-area {
+                display: block !important;
                 position: static !important;
                 padding: 0 !important;
               }
               
-              /* CRITICAL: Each page container must break to new page */
+              #cake-print-area > * {
+                display: block !important;
+              }
+              
+              /* Hide screen-only header */
+              #cake-print-area > header {
+                display: none !important;
+              }
+              
+              /* Page containers */
               .cake-page {
                 display: flex !important;
                 flex-direction: row !important;
@@ -265,8 +286,10 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 break-after: auto !important;
               }
               
-              /* Each cake card takes half */
+              /* Cake cards */
               .cake-card {
+                display: flex !important;
+                flex-direction: column !important;
                 flex: 1 1 50% !important;
                 max-width: calc(50% - 3mm) !important;
                 height: 180mm !important;
@@ -276,25 +299,18 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 box-sizing: border-box !important;
               }
               
-              /* Force colors to print */
+              .cake-card * {
+                display: revert !important;
+              }
+              
               * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
               }
-              
-              /* Hide the fixed container styling */
-              .fixed {
-                position: static !important;
-                overflow: visible !important;
-              }
-              
-              .sticky {
-                position: static !important;
-              }
             }
           `}
         </style>
-        <div className="fixed inset-0 bg-background z-50 overflow-auto">
+        <div className="print-preview-wrapper fixed inset-0 bg-background z-50 overflow-auto">
           {/* Controls - not printed */}
           <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between print:hidden">
             <Button variant="outline" onClick={() => setShowPrintPreview(false)}>
