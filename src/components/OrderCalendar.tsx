@@ -247,7 +247,7 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 /* Set landscape A4 page */
                 @page {
                   size: A4 landscape;
-                  margin: 10mm;
+                  margin: 5mm;
                 }
                 
                 /* Reset everything */
@@ -282,35 +282,49 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 /* Hide the header when printing */
                 .print-content > header {
                   display: none !important;
+                  visibility: hidden !important;
                 }
                 
                 /* Hide controls */
                 .no-print {
                   display: none !important;
+                  visibility: hidden !important;
                 }
                 
-                /* Each page: side-by-side cakes */
+                /* Each page: side-by-side cakes, fixed to page height */
                 .cake-page {
                   display: flex !important;
                   flex-direction: row !important;
-                  gap: 8mm;
+                  justify-content: space-between !important;
+                  align-items: stretch !important;
+                  gap: 5mm;
+                  width: 100%;
+                  height: 190mm; /* A4 landscape height minus margins */
                   page-break-after: always;
                   break-after: page;
-                  width: 100%;
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                  box-sizing: border-box;
                 }
                 .cake-page:last-child {
                   page-break-after: avoid;
                   break-after: avoid;
                 }
                 
-                /* Each cake card takes half the page width */
+                /* Each cake card takes exactly half the page */
                 .cake-card {
-                  flex: 1;
-                  max-width: 48%;
+                  flex: 0 0 calc(50% - 2.5mm) !important;
+                  width: calc(50% - 2.5mm) !important;
+                  max-width: calc(50% - 2.5mm) !important;
+                  height: 100% !important;
                   page-break-inside: avoid;
                   break-inside: avoid;
                   border: 2px solid black !important;
                   background: white !important;
+                  box-sizing: border-box;
+                  overflow: hidden;
+                  display: flex;
+                  flex-direction: column;
                 }
                 
                 /* Ensure colors print */
