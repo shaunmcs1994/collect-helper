@@ -80,16 +80,9 @@ function CakeCard({ order }: CakeCardProps) {
   const locationColor = isManchester ? '#3b82f6' : '#eab308'; // Blue for Manchester, Yellow for Wilmslow
   
   return (
-    <div className="cake-card border-2 border-foreground rounded-lg p-4 break-inside-avoid bg-white relative">
-      {/* Location Color Indicator - top right corner */}
-      <div 
-        className="absolute top-0 right-0 w-8 h-8 rounded-bl-lg border-l-2 border-b-2 border-foreground"
-        style={{ backgroundColor: locationColor }}
-        title={order.collectionLocation}
-      />
-      
+    <div className="cake-card border-2 border-foreground rounded-lg p-4 break-inside-avoid bg-white">
       {/* Header */}
-      <div className="flex justify-between items-start mb-3 pb-3 border-b-2 border-foreground pr-10">
+      <div className="flex justify-between items-start mb-3 pb-3 border-b-2 border-foreground">
         <div>
           <h2 className="text-xl font-bold">{order.collectionName}</h2>
           {order.alternativeName && (
