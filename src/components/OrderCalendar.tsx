@@ -244,90 +244,61 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           <style>
             {`
               @media print {
-                /* Set landscape A4 page */
                 @page {
                   size: A4 landscape;
-                  margin: 5mm;
+                  margin: 8mm;
                 }
                 
-                /* Reset everything */
-                html, body {
-                  height: auto !important;
-                  overflow: visible !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  background: white !important;
-                }
-                
-                /* Hide EVERYTHING by default */
-                body * {
-                  visibility: hidden;
-                }
-                
-                /* Show only print content and its children */
-                .print-content,
-                .print-content * {
-                  visibility: visible;
-                }
-                
-                /* Position print content at top */
-                .print-content {
-                  position: absolute;
-                  left: 0;
-                  top: 0;
-                  width: 100%;
-                  padding: 0 !important;
-                }
-                
-                /* Hide the header when printing */
-                .print-content > header {
+                /* Hide everything except print content */
+                body > *:not(.print-preview-container) {
                   display: none !important;
-                  visibility: hidden !important;
                 }
                 
-                /* Hide controls */
                 .no-print {
                   display: none !important;
-                  visibility: hidden !important;
                 }
                 
-                /* Each page: side-by-side cakes, fixed to page height */
+                .print-preview-container {
+                  position: static !important;
+                  overflow: visible !important;
+                }
+                
+                .print-content {
+                  padding: 0 !important;
+                }
+                
+                .print-content > header {
+                  display: none !important;
+                }
+                
+                /* Page container - each holds 2 cakes side by side */
                 .cake-page {
                   display: flex !important;
                   flex-direction: row !important;
-                  justify-content: space-between !important;
-                  align-items: stretch !important;
-                  gap: 5mm;
-                  width: 100%;
-                  height: 190mm; /* A4 landscape height minus margins */
-                  page-break-after: always;
-                  break-after: page;
-                  page-break-inside: avoid;
-                  break-inside: avoid;
-                  box-sizing: border-box;
+                  gap: 8mm !important;
+                  width: 100% !important;
+                  height: 185mm !important;
+                  page-break-after: always !important;
+                  page-break-inside: avoid !important;
+                  box-sizing: border-box !important;
                 }
+                
                 .cake-page:last-child {
-                  page-break-after: avoid;
-                  break-after: avoid;
+                  page-break-after: avoid !important;
                 }
                 
-                /* Each cake card takes exactly half the page */
-                .cake-card {
-                  flex: 0 0 calc(50% - 2.5mm) !important;
-                  width: calc(50% - 2.5mm) !important;
-                  max-width: calc(50% - 2.5mm) !important;
+                /* Each cake card - exactly half width */
+                .cake-page > .cake-card {
+                  flex: 1 1 0 !important;
+                  width: 50% !important;
+                  max-width: 50% !important;
                   height: 100% !important;
-                  page-break-inside: avoid;
-                  break-inside: avoid;
-                  border: 2px solid black !important;
+                  overflow: hidden !important;
+                  box-sizing: border-box !important;
+                  border: 2px solid #000 !important;
                   background: white !important;
-                  box-sizing: border-box;
-                  overflow: hidden;
-                  display: flex;
-                  flex-direction: column;
                 }
                 
-                /* Ensure colors print */
                 * {
                   -webkit-print-color-adjust: exact !important;
                   print-color-adjust: exact !important;
@@ -336,8 +307,8 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
             `}
           </style>
           
-          {/* Header */}
-          <header className="text-center mb-6 print:mb-4">
+          {/* Header - only visible on screen */}
+          <header className="text-center mb-6">
             <h1 className="text-2xl font-bold">Daily Cake Collection Sheet</h1>
             <p className="text-lg">
               {format(date, 'EEEE, dd/MM/yyyy')}
@@ -348,20 +319,17 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
             </p>
           </header>
           
-          {/* Cake cards - grouped into pages of 2 */}
-          {(() => {
-            const pages: typeof printableOrders[] = [];
-            for (let i = 0; i < printableOrders.length; i += 2) {
-              pages.push(printableOrders.slice(i, i + 2));
-            }
-            return pages.map((pageOrders, pageIndex) => (
-              <div key={pageIndex} className="cake-page">
+          {/* Cake cards - 2 per page, side by side */}
+          {Array.from({ length: Math.ceil(printableOrders.length / 2) }).map((_, pageIndex) => {
+            const pageOrders = printableOrders.slice(pageIndex * 2, pageIndex * 2 + 2);
+            return (
+              <div key={pageIndex} className="cake-page flex gap-4 mb-4">
                 {pageOrders.map((order) => (
                   <CakeCard key={order.id} order={order} />
                 ))}
               </div>
-            ));
-          })()}
+            );
+          })}
         </div>
       </div>
     );
