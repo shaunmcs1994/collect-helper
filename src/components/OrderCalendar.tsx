@@ -230,53 +230,66 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 margin: 8mm;
               }
               
-              /* Hide everything */
-              body * {
-                visibility: hidden !important;
+              /* Reset */
+              html, body {
+                height: auto !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 0 !important;
               }
               
-              /* Show only print area */
-              #cake-print-area,
-              #cake-print-area * {
-                visibility: visible !important;
+              /* Hide non-print elements */
+              .print\\:hidden,
+              header.print\\:hidden {
+                display: none !important;
               }
               
+              /* Print area takes full page */
               #cake-print-area {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
+                position: static !important;
+                padding: 0 !important;
               }
               
-              /* Page container */
+              /* CRITICAL: Each page container must break to new page */
               .cake-page {
                 display: flex !important;
                 flex-direction: row !important;
                 gap: 6mm !important;
                 width: 100% !important;
-                height: 185mm !important;
-                page-break-after: always !important;
-                page-break-inside: avoid !important;
-                margin-bottom: 0 !important;
+                min-height: 180mm !important;
+                break-after: page !important;
+                break-inside: avoid !important;
               }
               
               .cake-page:last-child {
-                page-break-after: avoid !important;
+                break-after: auto !important;
               }
               
-              /* Each cake card */
+              /* Each cake card takes half */
               .cake-card {
-                flex: 1 !important;
-                height: 100% !important;
+                flex: 1 1 50% !important;
+                max-width: calc(50% - 3mm) !important;
+                height: 180mm !important;
                 overflow: hidden !important;
                 border: 2px solid #000 !important;
                 background: white !important;
-                padding: 4mm !important;
+                box-sizing: border-box !important;
               }
               
+              /* Force colors to print */
               * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+              }
+              
+              /* Hide the fixed container styling */
+              .fixed {
+                position: static !important;
+                overflow: visible !important;
+              }
+              
+              .sticky {
+                position: static !important;
               }
             }
           `}
