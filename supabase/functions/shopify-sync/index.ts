@@ -70,25 +70,45 @@ serve(async (req) => {
     const todayUK = isoToUkFormat(todayISO); // D/M/YYYY
     console.log(`Looking for orders tagged with date: ${todayUK} (UK format)`);
 
-    // Fetch orders from Shopify
-    const shopifyUrl = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=any&limit=250`;
+    // Fetch ALL orders from Shopify using pagination
+    const allOrders: any[] = [];
+    let nextPageUrl: string | null = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=any&limit=250`;
     
-    const shopifyResponse = await fetch(shopifyUrl, {
-      headers: {
-        'X-Shopify-Access-Token': shopifyAccessToken,
-        'Content-Type': 'application/json',
-      },
-    });
+    while (nextPageUrl) {
+      console.log(`Fetching orders page...`);
+      const currentUrl = nextPageUrl;
+      nextPageUrl = null;
+      
+      const shopifyResponse: Response = await fetch(currentUrl, {
+        headers: {
+          'X-Shopify-Access-Token': shopifyAccessToken,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (!shopifyResponse.ok) {
-      const errorText = await shopifyResponse.text();
-      console.error('Shopify API error:', errorText);
-      throw new Error(`Shopify API error: ${shopifyResponse.status}`);
+      if (!shopifyResponse.ok) {
+        const errorText = await shopifyResponse.text();
+        console.error('Shopify API error:', errorText);
+        throw new Error(`Shopify API error: ${shopifyResponse.status}`);
+      }
+
+      const shopifyData = await shopifyResponse.json();
+      const pageOrders = shopifyData.orders || [];
+      allOrders.push(...pageOrders);
+      console.log(`Fetched ${pageOrders.length} orders (total: ${allOrders.length})`);
+
+      // Check for next page in Link header
+      const linkHeader: string | null = shopifyResponse.headers.get('Link');
+      
+      if (linkHeader) {
+        const nextMatch: RegExpMatchArray | null = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+        if (nextMatch && nextMatch[1]) {
+          nextPageUrl = nextMatch[1];
+        }
+      }
     }
-
-    const shopifyData = await shopifyResponse.json();
-    const allOrders = shopifyData.orders || [];
-    console.log(`Fetched ${allOrders.length} orders from Shopify`);
+    
+    console.log(`Total orders fetched from Shopify: ${allOrders.length}`);
 
     // Filter orders that have a valid date tag (DD/MM/YYYY format)
     const relevantOrders = allOrders.filter((order: any) => {
