@@ -9,6 +9,7 @@ export interface Product {
   properties?: ProductProperty[]; // Infinite Options data from Shopify
   sku?: string;
   variant_title?: string;
+  image_url?: string; // Product image from Shopify
 }
 
 export interface Order {

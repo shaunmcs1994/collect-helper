@@ -62,6 +62,32 @@ function getCustomerName(order: any): string {
   return order.shipping_address?.name || 'Unknown Customer';
 }
 
+// Fetch product image from Shopify
+async function fetchProductImage(productId: number, shopifyAccessToken: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/products/${productId}.json?fields=image`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': shopifyAccessToken,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      console.log(`Failed to fetch image for product ${productId}: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.product?.image?.src || null;
+  } catch (error) {
+    console.log(`Error fetching image for product ${productId}:`, error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -181,6 +207,31 @@ serve(async (req) => {
     console.log(`With valid date tags: ${relevantOrders.length}`);
     console.log(`Missing date tags: ${skippedOrders.filter(o => o.reason === 'missing_date_tag').length}`);
 
+    // Build a cache of product images to avoid repeated API calls
+    const productImageCache = new Map<number, string | null>();
+    
+    // Collect all unique product IDs from all relevant orders
+    const allProductIds = new Set<number>();
+    for (const order of relevantOrders) {
+      for (const item of order.line_items) {
+        if (item.product_id) {
+          allProductIds.add(item.product_id);
+        }
+      }
+    }
+    
+    console.log(`Fetching images for ${allProductIds.size} unique products...`);
+    
+    // Fetch all product images (with rate limiting - Shopify allows 2 requests/second)
+    for (const productId of allProductIds) {
+      const imageUrl = await fetchProductImage(productId, shopifyAccessToken);
+      productImageCache.set(productId, imageUrl);
+      // Small delay to respect rate limits
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    console.log(`Product images cached: ${productImageCache.size} products`);
+
     // Upsert orders into database
     let syncedCount = 0;
     let updatedCount = 0;
@@ -201,7 +252,7 @@ serve(async (req) => {
 
         console.log(`Processing order ${shopifyOrder.name}: date=${collectionDate}, location=${collectionLocation}, time=${pickupTime}`);
 
-        // Map line items to products with Infinite Options properties
+        // Map line items to products with Infinite Options properties and images
         const products = shopifyOrder.line_items.map((item: any) => ({
           name: item.title || item.name,
           quantity: item.quantity,
@@ -213,6 +264,7 @@ serve(async (req) => {
           })),
           sku: item.sku || null,
           variant_title: item.variant_title || null,
+          image_url: item.product_id ? productImageCache.get(item.product_id) || null : null,
         }));
 
         // Check if order already exists
@@ -307,6 +359,7 @@ serve(async (req) => {
         totalFromShopify: allOrders.length,
         totalWithDateTags: relevantOrders.length,
         skippedCount: skippedOrders.length,
+        productImagesFetched: productImageCache.size,
         fulfillmentBreakdown: {
           unfulfilled: unfulfilled.length,
           partial: partial.length,
