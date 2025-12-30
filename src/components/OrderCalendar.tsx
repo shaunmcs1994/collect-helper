@@ -227,92 +227,80 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
             @media print {
               @page {
                 size: A4 landscape;
-                margin: 8mm;
-              }
-              
-              /* Hide EVERYTHING by default */
-              body > * {
-                display: none !important;
-              }
-              
-              /* Show only the print preview container */
-              body > #root {
-                display: block !important;
-              }
-              
-              #root > * {
-                display: none !important;
-              }
-              
-              /* Target the print preview specifically */
-              .print-preview-wrapper {
-                display: block !important;
-                position: static !important;
-                overflow: visible !important;
-                background: white !important;
-              }
-              
-              .print-preview-wrapper > * {
-                display: none !important;
-              }
-              
-              #cake-print-area {
-                display: block !important;
-                position: static !important;
-                padding: 0 !important;
-              }
-              
-              #cake-print-area > * {
-                display: block !important;
-              }
-              
-              /* Hide screen-only header */
-              #cake-print-area > header {
-                display: none !important;
-              }
-              
-              /* Page containers */
-              .cake-page {
-                display: flex !important;
-                flex-direction: row !important;
-                gap: 6mm !important;
-                width: 100% !important;
-                min-height: 180mm !important;
-                break-after: page !important;
-                break-inside: avoid !important;
-              }
-              
-              .cake-page:last-child {
-                break-after: auto !important;
-              }
-              
-              /* Cake cards */
-              .cake-card {
-                display: flex !important;
-                flex-direction: column !important;
-                flex: 1 1 50% !important;
-                max-width: calc(50% - 3mm) !important;
-                height: 180mm !important;
-                overflow: hidden !important;
-                border: 2px solid #000 !important;
-                background: white !important;
-                box-sizing: border-box !important;
-              }
-              
-              .cake-card * {
-                display: revert !important;
-              }
-              
-              * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
+              margin: 8mm;
             }
+            
+            /* Hide everything except the print preview */
+            body > *:not(#root) {
+              display: none !important;
+            }
+            
+            /* The print preview wrapper becomes the only visible content */
+            .print-preview-wrapper {
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100% !important;
+              height: auto !important;
+              overflow: visible !important;
+              background: white !important;
+            }
+            
+            /* Hide the screen-only controls */
+            .no-print {
+              display: none !important;
+            }
+            
+            /* Print area layout */
+            #cake-print-area {
+              display: block !important;
+              padding: 0 !important;
+            }
+            
+            /* Hide the header inside print area */
+            #cake-print-area > header {
+              display: none !important;
+            }
+            
+            /* Page containers - two cakes side by side */
+            .cake-page {
+              display: flex !important;
+              flex-direction: row !important;
+              justify-content: space-between !important;
+              gap: 6mm !important;
+              width: 100% !important;
+              min-height: 180mm !important;
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+            
+            .cake-page:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+            
+            /* Each cake card takes half the page */
+            .cake-card {
+              flex: 1 1 50% !important;
+              max-width: calc(50% - 3mm) !important;
+              height: 180mm !important;
+              overflow: hidden !important;
+              border: 1px solid #ccc !important;
+              padding: 4mm !important;
+              box-sizing: border-box !important;
+            }
+            
+            /* Force colors to print */
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          }
           `}
         </style>
         <div className="print-preview-wrapper fixed inset-0 bg-background z-50 overflow-auto">
           {/* Controls - not printed */}
-          <div className="sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between print:hidden">
+          <div className="no-print sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between">
             <Button variant="outline" onClick={() => setShowPrintPreview(false)}>
               ← Back
             </Button>
