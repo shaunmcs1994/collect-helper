@@ -250,40 +250,42 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                   margin: 10mm;
                 }
                 
-                /* Reset page */
+                /* Reset everything */
                 html, body {
                   height: auto !important;
                   overflow: visible !important;
                   margin: 0 !important;
                   padding: 0 !important;
-                }
-                
-                /* Hide everything except print container */
-                body > #root > *:not(.print-preview-container) {
-                  display: none !important;
-                }
-                
-                /* Show print container */
-                .print-preview-container {
-                  display: block !important;
-                  position: static !important;
-                  overflow: visible !important;
-                  height: auto !important;
-                  width: 100% !important;
                   background: white !important;
-                  inset: auto !important;
                 }
                 
-                .no-print {
-                  display: none !important;
+                /* Hide EVERYTHING by default */
+                body * {
+                  visibility: hidden;
                 }
                 
+                /* Show only print content and its children */
+                .print-content,
+                .print-content * {
+                  visibility: visible;
+                }
+                
+                /* Position print content at top */
                 .print-content {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
                   padding: 0 !important;
                 }
                 
                 /* Hide the header when printing */
                 .print-content > header {
+                  display: none !important;
+                }
+                
+                /* Hide controls */
+                .no-print {
                   display: none !important;
                 }
                 
