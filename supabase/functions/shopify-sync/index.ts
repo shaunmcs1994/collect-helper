@@ -13,9 +13,10 @@ const SHOPIFY_API_VERSION = '2025-01';
 // Types for skipped orders tracking
 interface SkippedOrder {
   orderNumber: string;
-  reason: 'missing_date_tag' | 'already_collected' | 'sync_error';
+  reason: 'missing_date_tag' | 'already_collected' | 'sync_error' | 'partial_fulfillment';
   tags: string;
   customerName: string;
+  fulfillmentStatus?: string;
 }
 
 // Parse location from Zapiet tags
@@ -89,11 +90,12 @@ serve(async (req) => {
     // Track skipped orders for warnings
     const skippedOrders: SkippedOrder[] = [];
 
-    // Fetch UNFULFILLED orders from Shopify using cursor-based pagination
-    // Using fulfillment_status=unfulfilled to only get orders that haven't been fulfilled yet
+    // Fetch ALL non-fulfilled orders from Shopify using cursor-based pagination
+    // Using fulfillment_status=any to catch both unfulfilled AND partial orders
     const allOrders: any[] = [];
-    let nextPageUrl: string | null = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=open&fulfillment_status=unfulfilled&limit=250`;
+    let nextPageUrl: string | null = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=open&fulfillment_status=any&limit=250`;
     let pageCount = 0;
+    let fulfilledCount = 0;
     
     while (nextPageUrl) {
       pageCount++;
@@ -116,8 +118,17 @@ serve(async (req) => {
 
       const shopifyData = await shopifyResponse.json();
       const pageOrders = shopifyData.orders || [];
-      allOrders.push(...pageOrders);
-      console.log(`Page ${pageCount}: fetched ${pageOrders.length} orders (total so far: ${allOrders.length})`);
+      
+      // Filter out already fulfilled orders but count them
+      for (const order of pageOrders) {
+        if (order.fulfillment_status === 'fulfilled') {
+          fulfilledCount++;
+          console.log(`Skipping fulfilled order ${order.name}`);
+        } else {
+          allOrders.push(order);
+        }
+      }
+      console.log(`Page ${pageCount}: fetched ${pageOrders.length} orders, ${allOrders.length} unfulfilled/partial so far`);
 
       // Check for next page in Link header (Shopify uses rel="next" for cursor pagination)
       const linkHeader: string | null = shopifyResponse.headers.get('Link');
@@ -133,7 +144,12 @@ serve(async (req) => {
       }
     }
     
-    console.log(`Pagination complete: ${pageCount} pages, ${allOrders.length} total unfulfilled orders from Shopify`);
+    console.log(`Pagination complete: ${pageCount} pages, ${allOrders.length} unfulfilled/partial orders (${fulfilledCount} already fulfilled excluded)`);
+
+    // Log fulfillment status breakdown
+    const unfulfilled = allOrders.filter(o => o.fulfillment_status === null || o.fulfillment_status === 'unfulfilled');
+    const partial = allOrders.filter(o => o.fulfillment_status === 'partial');
+    console.log(`Fulfillment breakdown: ${unfulfilled.length} unfulfilled, ${partial.length} partial`);
 
     // Process all orders - track which ones are skipped due to missing date tags
     const relevantOrders: any[] = [];
@@ -149,14 +165,21 @@ serve(async (req) => {
           reason: 'missing_date_tag',
           tags: order.tags || '(no tags)',
           customerName: getCustomerName(order),
+          fulfillmentStatus: order.fulfillment_status || 'unfulfilled',
         });
-        console.log(`Skipped order ${order.name}: no date tag. Tags: "${order.tags || '(none)'}"`);
+        console.log('Skipped order ' + order.name + ': no date tag. Tags: "' + (order.tags || '(none)') + '", fulfillment: ' + (order.fulfillment_status || 'unfulfilled'));
       } else {
         relevantOrders.push(order);
       }
     }
 
     console.log(`Found ${relevantOrders.length} orders with valid date tags, ${skippedOrders.length} orders without date tags`);
+    console.log(`=== SYNC SUMMARY ===`);
+    console.log(`Total open orders from Shopify API: ${allOrders.length + fulfilledCount}`);
+    console.log(`Already fulfilled (excluded): ${fulfilledCount}`);
+    console.log(`Unfulfilled/partial orders: ${allOrders.length}`);
+    console.log(`With valid date tags: ${relevantOrders.length}`);
+    console.log(`Missing date tags: ${skippedOrders.filter(o => o.reason === 'missing_date_tag').length}`);
 
     // Upsert orders into database
     let syncedCount = 0;
@@ -276,6 +299,11 @@ serve(async (req) => {
         totalFromShopify: allOrders.length,
         totalWithDateTags: relevantOrders.length,
         skippedCount: skippedOrders.length,
+        fulfillmentBreakdown: {
+          unfulfilled: unfulfilled.length,
+          partial: partial.length,
+          fulfilledExcluded: fulfilledCount,
+        },
         warnings: skippedOrders.length > 0 ? {
           missingDateTag: skippedOrders.filter(o => o.reason === 'missing_date_tag'),
           alreadyCollected: skippedOrders.filter(o => o.reason === 'already_collected'),
