@@ -70,9 +70,10 @@ serve(async (req) => {
     const todayUK = isoToUkFormat(todayISO); // D/M/YYYY
     console.log(`Looking for orders tagged with date: ${todayUK} (UK format)`);
 
-    // Fetch ALL orders from Shopify using cursor-based pagination
+    // Fetch UNFULFILLED orders from Shopify using cursor-based pagination
+    // Using fulfillment_status=unfulfilled to only get orders that haven't been fulfilled yet
     const allOrders: any[] = [];
-    let nextPageUrl: string | null = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=any&limit=250`;
+    let nextPageUrl: string | null = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=open&fulfillment_status=unfulfilled&limit=250`;
     let pageCount = 0;
     
     while (nextPageUrl) {
