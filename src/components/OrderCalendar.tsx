@@ -78,79 +78,103 @@ function CakeCard({ order }: CakeCardProps) {
   const totalItems = order.products.reduce((sum, p) => sum + p.quantity, 0);
   
   return (
-    <div className="cake-card border-2 border-foreground rounded-lg p-6 break-inside-avoid bg-white">
+    <div className="cake-card border-2 border-foreground rounded-lg p-4 break-inside-avoid bg-white">
       {/* Header */}
-      <div className="flex justify-between items-start mb-4 pb-4 border-b-2 border-foreground">
+      <div className="flex justify-between items-start mb-3 pb-3 border-b-2 border-foreground">
         <div>
-          <h2 className="text-2xl font-bold">{order.collectionName}</h2>
+          <h2 className="text-xl font-bold">{order.collectionName}</h2>
           {order.alternativeName && (
-            <p className="text-lg text-muted-foreground">Alt: {order.alternativeName}</p>
+            <p className="text-sm text-muted-foreground">Alt: {order.alternativeName}</p>
           )}
         </div>
         <div className="text-right">
           <p className="text-lg font-bold">#{order.orderNumber}</p>
-          <p className="text-lg">{formatDateUK(order.collectionDate)}</p>
+          <p className="text-sm">{formatDateUK(order.collectionDate)}</p>
         </div>
       </div>
       
       {/* Order Details */}
-      <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-muted">
+      <div className="grid grid-cols-2 gap-2 mb-3 pb-3 border-b border-muted text-sm">
         <div className="flex items-center gap-2">
-          <MapPin className="w-5 h-5" />
+          <MapPin className="w-4 h-4" />
           <span className="font-medium">{order.collectionLocation}</span>
         </div>
         {order.pickupTime && (
           <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
+            <Clock className="w-4 h-4" />
             <span className="font-medium">{order.pickupTime}</span>
           </div>
         )}
         {order.phoneNumber && (
           <div className="flex items-center gap-2 col-span-2">
-            <UserIcon className="w-5 h-5" />
+            <UserIcon className="w-4 h-4" />
             <span className="font-medium">{order.phoneNumber}</span>
           </div>
         )}
       </div>
       
       {/* Products */}
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Package className="w-5 h-5" />
-          <h3 className="text-lg font-bold">Products ({totalItems} items)</h3>
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Package className="w-4 h-4" />
+          <h3 className="text-base font-bold">Products ({totalItems} items)</h3>
         </div>
         <div className="space-y-2">
           {order.products.map((product, i) => (
-            <div key={i} className="p-3 bg-muted/20 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-medium">{product.name}</span>
-                <span className={`text-xl font-bold px-3 py-1 rounded-full ${
-                  product.quantity > 1 ? 'bg-destructive/20 text-destructive' : 'bg-primary/20'
-                }`}>
-                  ×{product.quantity}
-                </span>
-              </div>
-              {/* Display Infinite Options properties if available */}
-              {product.properties && product.properties.length > 0 && (
-                <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                  {product.properties.map((prop, j) => (
-                    <div key={j} className="flex">
-                      <span className="font-medium mr-2">{prop.name}:</span>
-                      <span>{prop.value}</span>
+            <div key={i} className="p-2 bg-muted/20 rounded-lg border border-muted">
+              <div className="flex gap-3">
+                {/* Product Image */}
+                {product.image_url && (
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name}
+                    className="w-16 h-16 object-cover rounded flex-shrink-0"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1">
+                      <span className="text-base font-bold block">{product.name}</span>
+                      {product.variant_title && (
+                        <p className="text-sm text-muted-foreground">
+                          {product.variant_title}
+                        </p>
+                      )}
+                      {product.sku && (
+                        <p className="text-xs text-muted-foreground">
+                          SKU: {product.sku}
+                        </p>
+                      )}
                     </div>
-                  ))}
+                    <span className={`text-lg font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                      product.quantity > 1 ? 'bg-destructive/20 text-destructive' : 'bg-primary/20'
+                    }`}>
+                      ×{product.quantity}
+                    </span>
+                  </div>
+                  {/* Display Infinite Options properties if available */}
+                  {product.properties && product.properties.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-muted space-y-0.5">
+                      {product.properties.map((prop, j) => (
+                        <div key={j} className="text-sm">
+                          <span className="font-semibold">{prop.name}:</span>
+                          <span className="ml-1">{prop.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           ))}
         </div>
       </div>
       
       {/* Collection Checkbox */}
-      <div className="pt-4 border-t-2 border-foreground flex items-center gap-4">
-        <div className="w-8 h-8 border-2 border-foreground rounded flex-shrink-0"></div>
-        <span className="text-lg font-medium">Collected</span>
-        <div className="flex-1 border-b border-dashed border-foreground ml-4"></div>
+      <div className="pt-3 border-t-2 border-foreground flex items-center gap-3">
+        <div className="w-6 h-6 border-2 border-foreground rounded flex-shrink-0"></div>
+        <span className="text-sm font-medium">Collected</span>
+        <div className="flex-1 border-b border-dashed border-foreground ml-2"></div>
       </div>
     </div>
   );
@@ -205,16 +229,15 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           <style>
             {`
               @media print {
-                .cake-card-container {
+                .cake-card {
+                  page-break-inside: avoid;
+                  margin-bottom: 16px;
+                }
+                .cake-card-page {
                   page-break-after: always;
                 }
-                .cake-card-container:last-child {
+                .cake-card-page:last-child {
                   page-break-after: avoid;
-                }
-                .cake-card {
-                  height: 45vh;
-                  max-height: 45vh;
-                  overflow: hidden;
                 }
               }
             `}
@@ -232,18 +255,16 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
             </p>
           </header>
           
-          {/* Cake cards - 2 per page */}
-          <div className="space-y-4 print:space-y-6">
-            {Array.from({ length: Math.ceil(printableOrders.length / 2) }).map((_, pageIndex) => {
-              const pageOrders = printableOrders.slice(pageIndex * 2, pageIndex * 2 + 2);
-              return (
-                <div key={pageIndex} className="cake-card-container grid gap-6 print:gap-4">
-                  {pageOrders.map(order => (
-                    <CakeCard key={order.id} order={order} />
-                  ))}
-                </div>
-              );
-            })}
+          {/* Cake cards - each card avoids page breaks */}
+          <div className="space-y-4">
+            {printableOrders.map((order, index) => (
+              <div 
+                key={order.id} 
+                className={index % 2 === 1 ? 'cake-card-page' : ''}
+              >
+                <CakeCard order={order} />
+              </div>
+            ))}
           </div>
         </div>
       </div>
