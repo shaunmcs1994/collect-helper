@@ -54,10 +54,10 @@ serve(async (req) => {
   try {
     console.log('Starting Shopify sync with Zapiet tag format...');
     
-    // Get Shopify Admin API token from secrets
-    const shopifyAccessToken = Deno.env.get('SHOPIFY_ACCESS_TOKEN');
+    // Get Shopify Admin API token (custom app token with read_orders scope)
+    const shopifyAccessToken = Deno.env.get('SHOPIFY_ADMIN_TOKEN');
     if (!shopifyAccessToken) {
-      throw new Error('SHOPIFY_ACCESS_TOKEN not configured');
+      throw new Error('SHOPIFY_ADMIN_TOKEN not configured');
     }
 
     // Initialize Supabase client
