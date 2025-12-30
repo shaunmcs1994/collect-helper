@@ -24,10 +24,10 @@ serve(async (req) => {
 
     console.log(`Fulfilling order: ${orderNumber || shopifyOrderId}`);
 
-    // Get Shopify Admin API token
-    const shopifyAccessToken = Deno.env.get('SHOPIFY_ACCESS_TOKEN');
+    // Get Shopify Admin API token (custom app token with order permissions)
+    const shopifyAccessToken = Deno.env.get('SHOPIFY_ADMIN_TOKEN');
     if (!shopifyAccessToken) {
-      throw new Error('SHOPIFY_ACCESS_TOKEN not configured');
+      throw new Error('SHOPIFY_ADMIN_TOKEN not configured');
     }
 
     // First, find the order in Shopify if we only have order number
