@@ -229,15 +229,37 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           <style>
             {`
               @media print {
+                /* Reset fixed positioning for print */
+                body * {
+                  visibility: hidden;
+                }
+                .print-content, .print-content * {
+                  visibility: visible;
+                }
+                .print-content {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                }
+                .no-print {
+                  display: none !important;
+                }
                 .cake-card {
                   page-break-inside: avoid;
-                  margin-bottom: 16px;
+                  margin-bottom: 12px;
+                  border: 2px solid #000 !important;
                 }
                 .cake-card-page {
                   page-break-after: always;
                 }
                 .cake-card-page:last-child {
                   page-break-after: avoid;
+                }
+                /* Ensure colors print */
+                * {
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
                 }
               }
             `}
