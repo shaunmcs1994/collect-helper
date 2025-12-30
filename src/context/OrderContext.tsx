@@ -340,6 +340,9 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const markAsPending = useCallback(async (orderId: string) => {
     if (!user) return;
 
+    // Get the order first to check for Shopify info
+    const order = orders.find(o => o.id === orderId);
+
     try {
       const { error } = await supabase
         .from('orders')
@@ -353,17 +356,35 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       // Optimistic update
-      setOrders(prev => prev.map(order => {
-        if (order.id === orderId) {
+      setOrders(prev => prev.map(o => {
+        if (o.id === orderId) {
           return {
-            ...order,
+            ...o,
             status: 'pending' as const,
             collectedAt: undefined,
             collectedBy: undefined,
           };
         }
-        return order;
+        return o;
       }));
+
+      // If order has Shopify ID, trigger unfulfillment in background
+      if (order?.orderNumber) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          await supabase.functions.invoke('shopify-unfulfill', {
+            body: { 
+              orderNumber: order.orderNumber,
+              shopifyOrderId: order.shopifyOrderId 
+            },
+            headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined
+          });
+          console.log('Shopify unfulfillment triggered for order:', order.orderNumber);
+        } catch (unfulfillError) {
+          console.error('Shopify unfulfillment failed:', unfulfillError);
+          // Don't show error to user - revert still succeeded locally
+        }
+      }
 
       toast({
         title: "Order Reverted",
@@ -377,7 +398,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
     }
-  }, [user]);
+  }, [user, orders]);
 
   const getOrdersByStatus = useCallback((status: 'pending' | 'collected') => {
     return orders.filter(order => order.status === status);

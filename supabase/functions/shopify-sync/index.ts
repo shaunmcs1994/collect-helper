@@ -201,10 +201,18 @@ serve(async (req) => {
 
         console.log(`Processing order ${shopifyOrder.name}: date=${collectionDate}, location=${collectionLocation}, time=${pickupTime}`);
 
-        // Map line items to products
+        // Map line items to products with Infinite Options properties
         const products = shopifyOrder.line_items.map((item: any) => ({
           name: item.title || item.name,
           quantity: item.quantity,
+          properties: (item.properties || []).filter((p: any) => 
+            p.name && p.value && !p.name.startsWith('_') // Filter out internal properties starting with _
+          ).map((p: any) => ({
+            name: String(p.name),
+            value: String(p.value),
+          })),
+          sku: item.sku || null,
+          variant_title: item.variant_title || null,
         }));
 
         // Check if order already exists

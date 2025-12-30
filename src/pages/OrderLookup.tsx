@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useOrders } from '@/context/OrderContext';
 import { SearchBar } from '@/components/SearchBar';
 import { OrderCard } from '@/components/OrderCard';
+import { ShopifySyncButton } from '@/components/ShopifySyncButton';
 import { Link } from 'react-router-dom';
 import { Upload, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,16 +47,19 @@ export default function OrderLookup() {
       </header>
 
       {/* Countdown Banner */}
-      <div className="countdown-indicator flex items-center justify-between">
+      <div className="countdown-indicator flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">Orders Remaining Today</p>
+          <p className="text-sm font-medium text-muted-foreground">Orders Remaining</p>
           <p className="text-4xl font-bold text-primary">{remaining}</p>
         </div>
-        <Link to="/pending">
-          <Button variant="outline" size="lg">
-            View All Pending
-          </Button>
-        </Link>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <ShopifySyncButton />
+          <Link to="/pending">
+            <Button variant="outline" size="lg">
+              View All Pending
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Search Bar */}
