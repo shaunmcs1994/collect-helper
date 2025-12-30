@@ -70,12 +70,14 @@ serve(async (req) => {
     const todayUK = isoToUkFormat(todayISO); // D/M/YYYY
     console.log(`Looking for orders tagged with date: ${todayUK} (UK format)`);
 
-    // Fetch ALL orders from Shopify using pagination
+    // Fetch ALL orders from Shopify using cursor-based pagination
     const allOrders: any[] = [];
     let nextPageUrl: string | null = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=any&limit=250`;
+    let pageCount = 0;
     
     while (nextPageUrl) {
-      console.log(`Fetching orders page...`);
+      pageCount++;
+      console.log(`Fetching orders page ${pageCount}...`);
       const currentUrl = nextPageUrl;
       nextPageUrl = null;
       
@@ -95,20 +97,23 @@ serve(async (req) => {
       const shopifyData = await shopifyResponse.json();
       const pageOrders = shopifyData.orders || [];
       allOrders.push(...pageOrders);
-      console.log(`Fetched ${pageOrders.length} orders (total: ${allOrders.length})`);
+      console.log(`Page ${pageCount}: fetched ${pageOrders.length} orders (total so far: ${allOrders.length})`);
 
-      // Check for next page in Link header
+      // Check for next page in Link header (Shopify uses rel="next" for cursor pagination)
       const linkHeader: string | null = shopifyResponse.headers.get('Link');
+      console.log(`Link header: ${linkHeader || 'none'}`);
       
       if (linkHeader) {
-        const nextMatch: RegExpMatchArray | null = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+        // Match rel="next" - can appear as <url>; rel="next" or <url>; rel=next
+        const nextMatch: RegExpMatchArray | null = linkHeader.match(/<([^>]+)>;\s*rel=["']?next["']?/);
         if (nextMatch && nextMatch[1]) {
           nextPageUrl = nextMatch[1];
+          console.log(`Next page URL found`);
         }
       }
     }
     
-    console.log(`Total orders fetched from Shopify: ${allOrders.length}`);
+    console.log(`Pagination complete: ${pageCount} pages, ${allOrders.length} total orders`);
 
     // Filter orders that have a valid date tag (DD/MM/YYYY format)
     const relevantOrders = allOrders.filter((order: any) => {
