@@ -76,11 +76,20 @@ interface CakeCardProps {
 
 function CakeCard({ order }: CakeCardProps) {
   const totalItems = order.products.reduce((sum, p) => sum + p.quantity, 0);
+  const isManchester = order.collectionLocation === 'Manchester';
+  const locationColor = isManchester ? '#3b82f6' : '#22c55e'; // Blue for Manchester, Green for Wilmslow
   
   return (
-    <div className="cake-card border-2 border-foreground rounded-lg p-4 break-inside-avoid bg-white">
+    <div className="cake-card border-2 border-foreground rounded-lg p-4 break-inside-avoid bg-white relative">
+      {/* Location Color Indicator - top right corner */}
+      <div 
+        className="absolute top-0 right-0 w-8 h-8 rounded-bl-lg border-l-2 border-b-2 border-foreground"
+        style={{ backgroundColor: locationColor }}
+        title={order.collectionLocation}
+      />
+      
       {/* Header */}
-      <div className="flex justify-between items-start mb-3 pb-3 border-b-2 border-foreground">
+      <div className="flex justify-between items-start mb-3 pb-3 border-b-2 border-foreground pr-10">
         <div>
           <h2 className="text-xl font-bold">{order.collectionName}</h2>
           {order.alternativeName && (
@@ -93,25 +102,31 @@ function CakeCard({ order }: CakeCardProps) {
         </div>
       </div>
       
-      {/* Order Details */}
-      <div className="grid grid-cols-2 gap-2 mb-3 pb-3 border-b border-muted text-sm">
+      {/* Location & Time - BIGGER */}
+      <div className="flex items-center justify-between mb-3 pb-3 border-b-2 border-foreground bg-muted/30 -mx-4 px-4 py-2">
         <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4" />
-          <span className="font-medium">{order.collectionLocation}</span>
+          <div 
+            className="w-4 h-4 rounded-sm border border-foreground flex-shrink-0"
+            style={{ backgroundColor: locationColor }}
+          />
+          <MapPin className="w-5 h-5" />
+          <span className="text-lg font-bold">{order.collectionLocation}</span>
         </div>
         {order.pickupTime && (
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            <span className="font-medium">{order.pickupTime}</span>
-          </div>
-        )}
-        {order.phoneNumber && (
-          <div className="flex items-center gap-2 col-span-2">
-            <UserIcon className="w-4 h-4" />
-            <span className="font-medium">{order.phoneNumber}</span>
+            <Clock className="w-5 h-5" />
+            <span className="text-lg font-bold">{order.pickupTime}</span>
           </div>
         )}
       </div>
+      
+      {/* Phone Number */}
+      {order.phoneNumber && (
+        <div className="flex items-center gap-2 mb-3 text-sm">
+          <UserIcon className="w-4 h-4" />
+          <span className="font-medium">{order.phoneNumber}</span>
+        </div>
+      )}
       
       {/* Products */}
       <div className="mb-3">
