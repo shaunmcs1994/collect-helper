@@ -206,7 +206,7 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   
   if (showPrintPreview) {
     return (
-      <div className="fixed inset-0 bg-background z-50 overflow-auto">
+      <div className="print-preview-container fixed inset-0 bg-background z-50 overflow-auto">
         {/* Print controls - hidden when printing */}
         <div className="no-print sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between">
           <Button variant="outline" onClick={() => setShowPrintPreview(false)}>
@@ -229,33 +229,44 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           <style>
             {`
               @media print {
-                /* Reset fixed positioning for print */
-                body * {
-                  visibility: hidden;
+                /* Hide everything except print content */
+                body > *:not(.print-preview-container) {
+                  display: none !important;
                 }
-                .print-content, .print-content * {
-                  visibility: visible;
+                
+                /* Reset the fixed container for printing */
+                .print-preview-container {
+                  position: static !important;
+                  overflow: visible !important;
+                  height: auto !important;
+                  background: white !important;
                 }
-                .print-content {
-                  position: absolute;
-                  left: 0;
-                  top: 0;
-                  width: 100%;
-                }
+                
                 .no-print {
                   display: none !important;
                 }
-                .cake-card {
-                  page-break-inside: avoid;
-                  margin-bottom: 12px;
-                  border: 2px solid #000 !important;
+                
+                .print-content {
+                  padding: 0 !important;
                 }
-                .cake-card-page {
+                
+                /* Page structure: 2 cards per page */
+                .cake-page {
                   page-break-after: always;
+                  min-height: 0;
                 }
-                .cake-card-page:last-child {
+                .cake-page:last-child {
                   page-break-after: avoid;
                 }
+                
+                .cake-card {
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                  margin-bottom: 1rem;
+                  border: 2px solid black !important;
+                  background: white !important;
+                }
+                
                 /* Ensure colors print */
                 * {
                   -webkit-print-color-adjust: exact !important;
@@ -277,17 +288,20 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
             </p>
           </header>
           
-          {/* Cake cards - each card avoids page breaks */}
-          <div className="space-y-4">
-            {printableOrders.map((order, index) => (
-              <div 
-                key={order.id} 
-                className={index % 2 === 1 ? 'cake-card-page' : ''}
-              >
-                <CakeCard order={order} />
+          {/* Cake cards - grouped into pages of 2 */}
+          {(() => {
+            const pages: typeof printableOrders[] = [];
+            for (let i = 0; i < printableOrders.length; i += 2) {
+              pages.push(printableOrders.slice(i, i + 2));
+            }
+            return pages.map((pageOrders, pageIndex) => (
+              <div key={pageIndex} className="cake-page">
+                {pageOrders.map((order) => (
+                  <CakeCard key={order.id} order={order} />
+                ))}
               </div>
-            ))}
-          </div>
+            ));
+          })()}
         </div>
       </div>
     );
