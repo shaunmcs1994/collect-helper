@@ -10,6 +10,14 @@ const corsHeaders = {
 const SHOPIFY_STORE_DOMAIN = 'buzzycakes.myshopify.com';
 const SHOPIFY_API_VERSION = '2025-01';
 
+// Types for skipped orders tracking
+interface SkippedOrder {
+  orderNumber: string;
+  reason: 'missing_date_tag' | 'already_collected' | 'sync_error';
+  tags: string;
+  customerName: string;
+}
+
 // Parse location from Zapiet tags
 function getLocationFromTags(tags: string[]): string {
   const upperTags = tags.map(t => t.toUpperCase().trim());
@@ -45,6 +53,14 @@ function isoToUkFormat(isoDate: string): string {
   return `${parseInt(day)}/${parseInt(month)}/${year}`;
 }
 
+// Get customer name from order
+function getCustomerName(order: any): string {
+  if (order.customer?.first_name) {
+    return `${order.customer.first_name} ${order.customer.last_name || ''}`.trim();
+  }
+  return order.shipping_address?.name || 'Unknown Customer';
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -69,6 +85,9 @@ serve(async (req) => {
     const todayISO = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const todayUK = isoToUkFormat(todayISO); // D/M/YYYY
     console.log(`Looking for orders tagged with date: ${todayUK} (UK format)`);
+
+    // Track skipped orders for warnings
+    const skippedOrders: SkippedOrder[] = [];
 
     // Fetch UNFULFILLED orders from Shopify using cursor-based pagination
     // Using fulfillment_status=unfulfilled to only get orders that haven't been fulfilled yet
@@ -114,20 +133,34 @@ serve(async (req) => {
       }
     }
     
-    console.log(`Pagination complete: ${pageCount} pages, ${allOrders.length} total orders`);
+    console.log(`Pagination complete: ${pageCount} pages, ${allOrders.length} total unfulfilled orders from Shopify`);
 
-    // Filter orders that have a valid date tag (DD/MM/YYYY format)
-    const relevantOrders = allOrders.filter((order: any) => {
+    // Process all orders - track which ones are skipped due to missing date tags
+    const relevantOrders: any[] = [];
+    
+    for (const order of allOrders) {
       const tags = (order.tags || '').split(',').map((t: string) => t.trim());
       const collectionDate = getCollectionDateFromTags(tags);
-      return collectionDate !== null;
-    });
+      
+      if (!collectionDate) {
+        // Track this order as skipped due to missing date tag
+        skippedOrders.push({
+          orderNumber: order.name || String(order.order_number),
+          reason: 'missing_date_tag',
+          tags: order.tags || '(no tags)',
+          customerName: getCustomerName(order),
+        });
+        console.log(`Skipped order ${order.name}: no date tag. Tags: "${order.tags || '(none)'}"`);
+      } else {
+        relevantOrders.push(order);
+      }
+    }
 
-    console.log(`Found ${relevantOrders.length} orders with valid date tags`);
+    console.log(`Found ${relevantOrders.length} orders with valid date tags, ${skippedOrders.length} orders without date tags`);
 
     // Upsert orders into database
     let syncedCount = 0;
-    let skippedCount = 0;
+    let updatedCount = 0;
 
     for (const shopifyOrder of relevantOrders) {
       try {
@@ -136,13 +169,12 @@ serve(async (req) => {
         // Extract data from Zapiet tags
         const collectionDate = getCollectionDateFromTags(tags);
         if (!collectionDate) {
-          console.log(`Skipping order ${shopifyOrder.name}: no valid date tag`);
-          skippedCount++;
-          continue;
+          continue; // Already filtered above, but double-check
         }
         
         const collectionLocation = getLocationFromTags(tags);
         const pickupTime = getPickupTimeFromTags(tags);
+        const customerName = getCustomerName(shopifyOrder);
 
         console.log(`Processing order ${shopifyOrder.name}: date=${collectionDate}, location=${collectionLocation}, time=${pickupTime}`);
 
@@ -162,17 +194,20 @@ serve(async (req) => {
         if (existingOrder) {
           // Skip if already collected
           if (existingOrder.status === 'collected') {
+            skippedOrders.push({
+              orderNumber: shopifyOrder.name || String(shopifyOrder.order_number),
+              reason: 'already_collected',
+              tags: shopifyOrder.tags || '',
+              customerName: customerName,
+            });
             console.log(`Skipping order ${shopifyOrder.name}: already collected`);
-            skippedCount++;
             continue;
           }
           // Update existing order with latest tag data
           await supabase
             .from('orders')
             .update({
-              customer_name: shopifyOrder.customer?.first_name 
-                ? `${shopifyOrder.customer.first_name} ${shopifyOrder.customer.last_name || ''}`.trim()
-                : shopifyOrder.shipping_address?.name || 'Customer',
+              customer_name: customerName,
               collection_date: collectionDate,
               collection_location: collectionLocation,
               pickup_time: pickupTime,
@@ -181,18 +216,17 @@ serve(async (req) => {
             })
             .eq('id', existingOrder.id);
           
+          updatedCount++;
           console.log(`Updated order ${shopifyOrder.name}`);
         } else {
           // Insert new order
           const status = shopifyOrder.fulfillment_status === 'fulfilled' ? 'collected' : 'pending';
           
-          await supabase
+          const { error: insertError } = await supabase
             .from('orders')
             .insert({
               order_number: shopifyOrder.name || String(shopifyOrder.order_number),
-              customer_name: shopifyOrder.customer?.first_name 
-                ? `${shopifyOrder.customer.first_name} ${shopifyOrder.customer.last_name || ''}`.trim()
-                : shopifyOrder.shipping_address?.name || 'Customer',
+              customer_name: customerName,
               collection_date: collectionDate,
               collection_location: collectionLocation,
               pickup_time: pickupTime,
@@ -200,24 +234,53 @@ serve(async (req) => {
               status: status,
             });
           
+          if (insertError) {
+            console.error(`Error inserting order ${shopifyOrder.name}:`, insertError);
+            skippedOrders.push({
+              orderNumber: shopifyOrder.name || String(shopifyOrder.order_number),
+              reason: 'sync_error',
+              tags: shopifyOrder.tags || '',
+              customerName: customerName,
+            });
+            continue;
+          }
+          
           console.log(`Inserted new order ${shopifyOrder.name}`);
         }
         
         syncedCount++;
       } catch (orderError) {
         console.error(`Error syncing order ${shopifyOrder.name}:`, orderError);
+        skippedOrders.push({
+          orderNumber: shopifyOrder.name || String(shopifyOrder.order_number),
+          reason: 'sync_error',
+          tags: shopifyOrder.tags || '',
+          customerName: getCustomerName(shopifyOrder),
+        });
       }
     }
 
-    console.log(`Sync complete: ${syncedCount} synced, ${skippedCount} skipped`);
+    // Group skipped orders by reason for summary
+    const missingDateCount = skippedOrders.filter(o => o.reason === 'missing_date_tag').length;
+    const alreadyCollectedCount = skippedOrders.filter(o => o.reason === 'already_collected').length;
+    const errorCount = skippedOrders.filter(o => o.reason === 'sync_error').length;
+
+    console.log(`Sync complete: ${syncedCount} synced (${updatedCount} updated), skipped: ${missingDateCount} missing date, ${alreadyCollectedCount} already collected, ${errorCount} errors`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: `Synced ${syncedCount} orders from Shopify`,
         synced: syncedCount,
-        skipped: skippedCount,
-        total: relevantOrders.length,
+        updated: updatedCount,
+        totalFromShopify: allOrders.length,
+        totalWithDateTags: relevantOrders.length,
+        skippedCount: skippedOrders.length,
+        warnings: skippedOrders.length > 0 ? {
+          missingDateTag: skippedOrders.filter(o => o.reason === 'missing_date_tag'),
+          alreadyCollected: skippedOrders.filter(o => o.reason === 'already_collected'),
+          syncError: skippedOrders.filter(o => o.reason === 'sync_error'),
+        } : undefined,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

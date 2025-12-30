@@ -5,12 +5,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 
+interface SyncWarnings {
+  missingDateTag: Array<{ orderNumber: string; tags: string; customerName: string }>;
+  alreadyCollected: Array<{ orderNumber: string; tags: string; customerName: string }>;
+  syncError: Array<{ orderNumber: string; tags: string; customerName: string }>;
+}
+
 interface OrderContextType {
   orders: Order[];
   backups: Backup[];
   isLoading: boolean;
   isSyncing: boolean;
   lastSyncTime: string | null;
+  syncWarnings: SyncWarnings | null;
   productEmojis: Record<string, string>;
   productColors: Record<string, string>;
   getDisplayName: (userId: string) => string;
@@ -31,6 +38,7 @@ interface OrderContextType {
   downloadBackup: () => void;
   clearAllData: () => Promise<void>;
   syncWithShopify: () => Promise<void>;
+  clearSyncWarnings: () => void;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -46,6 +54,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [syncWarnings, setSyncWarnings] = useState<SyncWarnings | null>(null);
   const { user, displayName } = useAuth();
 
   // Load data from Supabase on mount and when user changes
@@ -547,10 +556,34 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       setLastSyncTime(new Date().toISOString());
       await loadOrders();
 
-      toast({
-        title: "Sync Complete",
-        description: data?.message || `Synced orders from Shopify.`,
-      });
+      // Check for warnings about skipped orders
+      const warnings = data?.warnings;
+      const missingDateOrders = warnings?.missingDateTag || [];
+      
+      if (missingDateOrders.length > 0) {
+        // Show warning toast with details
+        const orderList = missingDateOrders.slice(0, 5).map((o: any) => o.orderNumber).join(', ');
+        const moreText = missingDateOrders.length > 5 ? ` and ${missingDateOrders.length - 5} more` : '';
+        
+        toast({
+          title: `Sync Complete - ${missingDateOrders.length} orders need attention`,
+          description: `Orders missing date tags: ${orderList}${moreText}. Add DD/MM/YYYY date tags in Shopify.`,
+          variant: "destructive",
+          duration: 10000,
+        });
+      } else {
+        toast({
+          title: "Sync Complete",
+          description: data?.message || `Synced orders from Shopify.`,
+        });
+      }
+      
+      // Store warnings in state for UI display
+      if (warnings && (warnings.missingDateTag?.length > 0 || warnings.syncError?.length > 0)) {
+        setSyncWarnings(warnings);
+      } else {
+        setSyncWarnings(null);
+      }
     } catch (error) {
       console.error('Error syncing with Shopify:', error);
       toast({
@@ -636,6 +669,10 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
   }, [user, createBackupInternal]);
 
+  const clearSyncWarnings = useCallback(() => {
+    setSyncWarnings(null);
+  }, []);
+
   return (
     <OrderContext.Provider value={{
       orders,
@@ -643,6 +680,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       isLoading,
       isSyncing,
       lastSyncTime,
+      syncWarnings,
       productEmojis,
       productColors,
       getDisplayName,
@@ -663,6 +701,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       downloadBackup,
       clearAllData,
       syncWithShopify,
+      clearSyncWarnings,
     }}>
       {children}
     </OrderContext.Provider>
