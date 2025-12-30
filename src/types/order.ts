@@ -1,6 +1,14 @@
+export interface ProductProperty {
+  name: string;
+  value: string;
+}
+
 export interface Product {
   name: string;
   quantity: number;
+  properties?: ProductProperty[]; // Infinite Options data from Shopify
+  sku?: string;
+  variant_title?: string;
 }
 
 export interface Order {

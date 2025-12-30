@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.shopify-fulfill]
 verify_jwt = true
+
+[functions.shopify-unfulfill]
+verify_jwt = true

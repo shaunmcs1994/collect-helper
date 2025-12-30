@@ -12,9 +12,7 @@ import CollectedOrders from "./pages/CollectedOrders";
 import StockPage from "./pages/StockPage";
 import UploadPage from "./pages/UploadPage";
 import BackupPage from "./pages/BackupPage";
-import PrintPage from "./pages/PrintPage";
 import CalendarPage from "./pages/CalendarPage";
-import CakePrintPage from "./pages/CakePrintPage";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -118,31 +116,11 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/print"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <PrintPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/calendar"
         element={
           <ProtectedRoute>
             <AppLayout>
               <CalendarPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/cake-print"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <CakePrintPage />
             </AppLayout>
           </ProtectedRoute>
         }

@@ -7,9 +7,7 @@ import {
   BarChart3, 
   Upload, 
   Shield,
-  Printer,
   CalendarDays,
-  Cake,
   Menu,
   X,
   LogOut,
@@ -32,12 +30,10 @@ const navItems = [
   { path: '/', label: 'Order Lookup', icon: Search },
   { path: '/pending', label: 'Pending', icon: Clock },
   { path: '/collected', label: 'Collected', icon: CheckCircle },
-  { path: '/stock', label: 'Stock', icon: BarChart3 },
   { path: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { path: '/cake-print', label: 'Cake Print', icon: Cake },
   { path: '/upload', label: 'Upload', icon: Upload },
   { path: '/backup', label: 'Backup', icon: Shield },
-  { path: '/print', label: 'Print', icon: Printer },
+  { path: '/stock', label: 'Stock', icon: BarChart3 },
 ];
 
 export function Navigation() {
