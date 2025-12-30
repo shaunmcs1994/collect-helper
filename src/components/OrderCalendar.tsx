@@ -170,11 +170,26 @@ function CakeCard({ order }: CakeCardProps) {
         </div>
       </div>
       
-      {/* Collection Checkbox */}
-      <div className="pt-3 border-t-2 border-foreground flex items-center gap-3">
-        <div className="w-6 h-6 border-2 border-foreground rounded flex-shrink-0"></div>
-        <span className="text-sm font-medium">Collected</span>
-        <div className="flex-1 border-b border-dashed border-foreground ml-2"></div>
+      {/* Status Checkboxes */}
+      <div className="pt-3 border-t-2 border-foreground">
+        <div className="grid grid-cols-4 gap-2">
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-6 h-6 border-2 border-foreground rounded flex-shrink-0"></div>
+            <span className="text-xs font-medium text-center">Stacked</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-6 h-6 border-2 border-foreground rounded flex-shrink-0"></div>
+            <span className="text-xs font-medium text-center">Crumb coated</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-6 h-6 border-2 border-foreground rounded flex-shrink-0"></div>
+            <span className="text-xs font-medium text-center">Decorated</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-6 h-6 border-2 border-foreground rounded flex-shrink-0"></div>
+            <span className="text-xs font-medium text-center">Boxed</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -229,17 +244,25 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           <style>
             {`
               @media print {
-                /* Hide everything except print content */
-                body > *:not(.print-preview-container) {
+                /* Hide everything on the page first */
+                html, body {
+                  height: auto !important;
+                  overflow: visible !important;
+                }
+                
+                body > #root {
                   display: none !important;
                 }
                 
-                /* Reset the fixed container for printing */
+                /* Show only print content */
                 .print-preview-container {
+                  display: block !important;
                   position: static !important;
                   overflow: visible !important;
                   height: auto !important;
+                  width: 100% !important;
                   background: white !important;
+                  inset: auto !important;
                 }
                 
                 .no-print {
@@ -247,22 +270,24 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 }
                 
                 .print-content {
-                  padding: 0 !important;
+                  padding: 10mm !important;
                 }
                 
-                /* Page structure: 2 cards per page */
+                /* Each page container */
                 .cake-page {
                   page-break-after: always;
-                  min-height: 0;
+                  break-after: page;
                 }
                 .cake-page:last-child {
                   page-break-after: avoid;
+                  break-after: avoid;
                 }
                 
+                /* Each cake card */
                 .cake-card {
                   page-break-inside: avoid;
                   break-inside: avoid;
-                  margin-bottom: 1rem;
+                  margin-bottom: 8mm;
                   border: 2px solid black !important;
                   background: white !important;
                 }
