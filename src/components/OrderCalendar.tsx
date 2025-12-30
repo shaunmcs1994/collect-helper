@@ -244,17 +244,26 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           <style>
             {`
               @media print {
-                /* Hide everything on the page first */
+                /* Set landscape A4 page */
+                @page {
+                  size: A4 landscape;
+                  margin: 10mm;
+                }
+                
+                /* Reset page */
                 html, body {
                   height: auto !important;
                   overflow: visible !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
                 }
                 
-                body > #root {
+                /* Hide everything except print container */
+                body > #root > *:not(.print-preview-container) {
                   display: none !important;
                 }
                 
-                /* Show only print content */
+                /* Show print container */
                 .print-preview-container {
                   display: block !important;
                   position: static !important;
@@ -270,24 +279,34 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 }
                 
                 .print-content {
-                  padding: 10mm !important;
+                  padding: 0 !important;
                 }
                 
-                /* Each page container */
+                /* Hide the header when printing */
+                .print-content > header {
+                  display: none !important;
+                }
+                
+                /* Each page: side-by-side cakes */
                 .cake-page {
+                  display: flex !important;
+                  flex-direction: row !important;
+                  gap: 8mm;
                   page-break-after: always;
                   break-after: page;
+                  width: 100%;
                 }
                 .cake-page:last-child {
                   page-break-after: avoid;
                   break-after: avoid;
                 }
                 
-                /* Each cake card */
+                /* Each cake card takes half the page width */
                 .cake-card {
+                  flex: 1;
+                  max-width: 48%;
                   page-break-inside: avoid;
                   break-inside: avoid;
-                  margin-bottom: 8mm;
                   border: 2px solid black !important;
                   background: white !important;
                 }
