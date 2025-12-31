@@ -21,8 +21,11 @@ export type Database = {
           collection_date: string
           collection_location: string
           created_at: string
+          custom_images: Json
+          custom_notes: string | null
           customer_name: string
           id: string
+          is_custom_cake: boolean
           order_number: string
           pickup_time: string | null
           products: Json
@@ -35,8 +38,11 @@ export type Database = {
           collection_date: string
           collection_location: string
           created_at?: string
+          custom_images?: Json
+          custom_notes?: string | null
           customer_name: string
           id?: string
+          is_custom_cake?: boolean
           order_number: string
           pickup_time?: string | null
           products?: Json
@@ -49,8 +55,11 @@ export type Database = {
           collection_date?: string
           collection_location?: string
           created_at?: string
+          custom_images?: Json
+          custom_notes?: string | null
           customer_name?: string
           id?: string
+          is_custom_cake?: boolean
           order_number?: string
           pickup_time?: string | null
           products?: Json

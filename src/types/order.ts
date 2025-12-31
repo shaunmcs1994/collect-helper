@@ -26,6 +26,9 @@ export interface Order {
   collectedAt?: string;
   collectedBy?: string;
   shopifyOrderId?: string; // For Shopify integration
+  isCustomCake?: boolean; // Flag for custom cake orders needing enhanced print
+  customNotes?: string; // Detailed instructions for custom cakes
+  customImages?: string[]; // Array of image URLs for custom cakes
 }
 
 export interface StockItem {

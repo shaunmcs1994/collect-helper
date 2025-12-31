@@ -4,8 +4,9 @@ import { Order, Product } from '@/types/order';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, ChevronLeft, ChevronRight, Eye, List, MapPin, Package, Printer, Clock, User as UserIcon } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Eye, List, MapPin, Package, Printer, Clock, User as UserIcon, Cake } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
+import { OrderDetailModal } from './OrderDetailModal';
 
 type ViewMode = 'summary' | 'detailed';
 type LocationFilter = 'all' | 'Wilmslow' | 'Manchester';
@@ -78,13 +79,22 @@ function CakeCard({ order }: CakeCardProps) {
   const totalItems = order.products.reduce((sum, p) => sum + p.quantity, 0);
   const isManchester = order.collectionLocation === 'Manchester';
   const locationColor = isManchester ? '#3b82f6' : '#eab308'; // Blue for Manchester, Yellow for Wilmslow
+  const isCustom = order.isCustomCake;
   
   return (
-    <div className="cake-card border-2 border-foreground rounded-lg p-4 break-inside-avoid bg-white">
+    <div className={`cake-card border-2 border-foreground rounded-lg p-4 break-inside-avoid bg-white ${isCustom ? 'custom-cake-card' : ''}`}>
       {/* Header */}
       <div className="flex justify-between items-start mb-3 pb-3 border-b-2 border-foreground">
         <div>
-          <h2 className="text-xl font-bold">{order.collectionName}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold">{order.collectionName}</h2>
+            {isCustom && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-bold print:bg-amber-200">
+                <Cake className="h-3 w-3" />
+                CUSTOM
+              </span>
+            )}
+          </div>
           {order.alternativeName && (
             <p className="text-sm text-muted-foreground">Alt: {order.alternativeName}</p>
           )}
@@ -178,6 +188,31 @@ function CakeCard({ order }: CakeCardProps) {
         </div>
       </div>
       
+      {/* Custom Cake Notes */}
+      {isCustom && order.customNotes && (
+        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <h4 className="text-sm font-bold text-amber-800 mb-1">Custom Instructions:</h4>
+          <p className="text-sm whitespace-pre-wrap">{order.customNotes}</p>
+        </div>
+      )}
+      
+      {/* Custom Cake Images */}
+      {isCustom && order.customImages && order.customImages.length > 0 && (
+        <div className="mb-3">
+          <h4 className="text-sm font-bold mb-2">Reference Images:</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {order.customImages.map((url, i) => (
+              <img 
+                key={i}
+                src={url} 
+                alt={`Reference ${i + 1}`}
+                className="w-full h-24 object-cover rounded border"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      
       {/* Status Checkboxes */}
       <div className="pt-3 border-t-2 border-foreground">
         <div className="grid grid-cols-4 gap-2">
@@ -212,9 +247,14 @@ interface SelectedDayModalProps {
 function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const [printLocation, setPrintLocation] = useState<LocationFilter>('all');
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const collectedOrders = orders.filter(o => o.status === 'collected');
+  
+  // Separate regular and custom cakes for smart pagination
+  const regularOrders = pendingOrders.filter(o => !o.isCustomCake);
+  const customOrders = pendingOrders.filter(o => o.isCustomCake);
   
   // Filter orders for printing
   const printableOrders = useMemo(() => {
@@ -222,6 +262,13 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
       printLocation === 'all' || o.collectionLocation === printLocation
     ).sort((a, b) => a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase()));
   }, [pendingOrders, printLocation]);
+  
+  // Calculate pages - custom cakes get full page, regular cakes are 2 per page
+  const filteredRegular = printableOrders.filter(o => !o.isCustomCake);
+  const filteredCustom = printableOrders.filter(o => o.isCustomCake);
+  const regularPages = Math.ceil(filteredRegular.length / 2);
+  const customPages = filteredCustom.length;
+  const totalPages = regularPages + customPages;
   
   const handlePrint = () => {
     window.print();
@@ -235,75 +282,104 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
             @media print {
               @page {
                 size: A4 landscape;
-              margin: 8mm;
-            }
+                margin: 8mm;
+              }
             
-            /* Hide everything except the print preview */
-            body > *:not(#root) {
-              display: none !important;
-            }
+              /* Hide everything except the print preview */
+              body > *:not(#root) {
+                display: none !important;
+              }
             
-            /* The print preview wrapper becomes the only visible content */
-            .print-preview-wrapper {
-              position: absolute !important;
-              top: 0 !important;
-              left: 0 !important;
-              width: 100% !important;
-              height: auto !important;
-              overflow: visible !important;
-              background: white !important;
-            }
+              /* The print preview wrapper becomes the only visible content */
+              .print-preview-wrapper {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+              }
             
-            /* Hide the screen-only controls */
-            .no-print {
-              display: none !important;
-            }
+              /* Hide the screen-only controls */
+              .no-print {
+                display: none !important;
+              }
             
-            /* Print area layout */
-            #cake-print-area {
-              display: block !important;
-              padding: 0 !important;
-            }
+              /* Print area layout */
+              #cake-print-area {
+                display: block !important;
+                padding: 0 !important;
+              }
             
-            /* Hide the header inside print area */
-            #cake-print-area > header {
-              display: none !important;
-            }
+              /* Hide the header inside print area */
+              #cake-print-area > header {
+                display: none !important;
+              }
             
-            /* Page containers - two cakes side by side */
-            .cake-page {
-              display: flex !important;
-              flex-direction: row !important;
-              justify-content: space-between !important;
-              gap: 6mm !important;
-              width: 100% !important;
-              min-height: 180mm !important;
-              page-break-after: always !important;
-              break-after: page !important;
-            }
+              /* Page containers - two cakes side by side for regular */
+              .cake-page {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                gap: 6mm !important;
+                width: 100% !important;
+                min-height: 180mm !important;
+                page-break-after: always !important;
+                break-after: page !important;
+              }
             
-            .cake-page:last-child {
-              page-break-after: auto !important;
-              break-after: auto !important;
-            }
+              .cake-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
+              }
             
-            /* Each cake card takes half the page */
-            .cake-card {
-              flex: 1 1 50% !important;
-              max-width: calc(50% - 3mm) !important;
-              height: 180mm !important;
-              overflow: hidden !important;
-              border: 1px solid #ccc !important;
-              padding: 4mm !important;
-              box-sizing: border-box !important;
-            }
+              /* Regular cake cards - half page each */
+              .cake-card:not(.custom-cake-card) {
+                flex: 1 1 50% !important;
+                max-width: calc(50% - 3mm) !important;
+                height: 180mm !important;
+                overflow: hidden !important;
+                border: 1px solid #ccc !important;
+                padding: 4mm !important;
+                box-sizing: border-box !important;
+              }
+              
+              /* Custom cake cards - full page */
+              .custom-cake-page {
+                display: block !important;
+                width: 100% !important;
+                min-height: 180mm !important;
+                page-break-after: always !important;
+                break-after: page !important;
+              }
+              
+              .custom-cake-page:last-child {
+                page-break-after: auto !important;
+                break-after: auto !important;
+              }
+              
+              .custom-cake-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                min-height: 180mm !important;
+                border: 2px solid #000 !important;
+                padding: 6mm !important;
+                box-sizing: border-box !important;
+              }
+              
+              .custom-cake-card img {
+                max-height: 60mm !important;
+                object-fit: contain !important;
+              }
             
-            /* Force colors to print */
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
+              /* Force colors to print */
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
             }
-          }
           `}
         </style>
         <div className="print-preview-wrapper fixed inset-0 bg-background z-50 overflow-auto">
@@ -315,7 +391,7 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
             <div className="text-center">
               <p className="text-lg font-medium">{printableOrders.length} cakes to print</p>
               <p className="text-sm text-muted-foreground">
-                {Math.ceil(printableOrders.length / 2)} pages (2 per page)
+                {totalPages} pages ({filteredRegular.length} regular @ 2/page, {filteredCustom.length} custom @ 1/page)
               </p>
             </div>
             <Button onClick={handlePrint} className="btn-collect">
@@ -338,17 +414,24 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
               </p>
             </header>
             
-            {/* Cake pages - 2 cakes per page */}
-            {Array.from({ length: Math.ceil(printableOrders.length / 2) }).map((_, pageIndex) => {
-              const pageOrders = printableOrders.slice(pageIndex * 2, pageIndex * 2 + 2);
+            {/* Regular Cake pages - 2 cakes per page */}
+            {Array.from({ length: Math.ceil(filteredRegular.length / 2) }).map((_, pageIndex) => {
+              const pageOrders = filteredRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
               return (
-                <div key={pageIndex} className="cake-page flex gap-4 mb-4">
+                <div key={`regular-${pageIndex}`} className="cake-page flex gap-4 mb-4">
                   {pageOrders.map((order) => (
                     <CakeCard key={order.id} order={order} />
                   ))}
                 </div>
               );
             })}
+            
+            {/* Custom Cake pages - 1 per page */}
+            {filteredCustom.map((order) => (
+              <div key={`custom-${order.id}`} className="custom-cake-page mb-4">
+                <CakeCard order={order} />
+              </div>
+            ))}
           </div>
         </div>
       </>
@@ -413,12 +496,21 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           {orders.map((order) => (
             <div 
               key={order.id} 
-              className={`p-4 rounded-lg border ${order.status === 'collected' ? 'bg-muted/50 border-muted' : 'bg-card border-border'}`}
+              className={`p-4 rounded-lg border cursor-pointer hover:bg-secondary/50 transition-colors ${order.status === 'collected' ? 'bg-muted/50 border-muted' : 'bg-card border-border'}`}
+              onClick={() => setSelectedOrder(order)}
             >
               <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h3 className="font-bold text-lg">{order.collectionName}</h3>
-                  <p className="text-sm text-muted-foreground">Order #{order.orderNumber}</p>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h3 className="font-bold text-lg">{order.collectionName}</h3>
+                    <p className="text-sm text-muted-foreground">Order #{order.orderNumber}</p>
+                  </div>
+                  {order.isCustomCake && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-medium">
+                      <Cake className="h-3 w-3" />
+                      Custom
+                    </span>
+                  )}
                 </div>
                 <Badge variant={order.status === 'collected' ? 'secondary' : 'default'}>
                   {order.status}
@@ -464,6 +556,13 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
             </div>
           ))}
         </div>
+        
+        {/* Order Detail Modal for editing custom cake details */}
+        <OrderDetailModal
+          order={selectedOrder}
+          open={selectedOrder !== null}
+          onOpenChange={(open) => !open && setSelectedOrder(null)}
+        />
       </Card>
     </div>
   );

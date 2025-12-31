@@ -39,6 +39,9 @@ interface OrderContextType {
   clearAllData: () => Promise<void>;
   syncWithShopify: () => Promise<void>;
   clearSyncWarnings: () => void;
+  updateOrderDetails: (orderId: string, details: { isCustomCake?: boolean; customNotes?: string; customImages?: string[] }) => Promise<void>;
+  uploadCakeImage: (file: File) => Promise<string | null>;
+  deleteCakeImage: (imageUrl: string) => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -130,6 +133,9 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           status: row.status as 'pending' | 'collected',
           collectedAt: row.collected_at || undefined,
           collectedBy: row.collected_by || undefined,
+          isCustomCake: (row as any).is_custom_cake || false,
+          customNotes: (row as any).custom_notes || undefined,
+          customImages: (row as any).custom_images || [],
         };
       });
 
@@ -694,6 +700,102 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     setSyncWarnings(null);
   }, []);
 
+  const updateOrderDetails = useCallback(async (
+    orderId: string, 
+    details: { isCustomCake?: boolean; customNotes?: string; customImages?: string[] }
+  ) => {
+    if (!user) return;
+
+    try {
+      const updateData: any = {};
+      if (details.isCustomCake !== undefined) updateData.is_custom_cake = details.isCustomCake;
+      if (details.customNotes !== undefined) updateData.custom_notes = details.customNotes;
+      if (details.customImages !== undefined) updateData.custom_images = details.customImages;
+
+      const { error } = await supabase
+        .from('orders')
+        .update(updateData)
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // Optimistic update
+      setOrders(prev => prev.map(o => {
+        if (o.id === orderId) {
+          return {
+            ...o,
+            isCustomCake: details.isCustomCake ?? o.isCustomCake,
+            customNotes: details.customNotes ?? o.customNotes,
+            customImages: details.customImages ?? o.customImages,
+          };
+        }
+        return o;
+      }));
+
+      toast({
+        title: "Order Updated",
+        description: "Custom cake details saved.",
+      });
+    } catch (error) {
+      console.error('Error updating order details:', error);
+      toast({
+        title: "Error",
+        description: "Could not update order details.",
+        variant: "destructive",
+      });
+    }
+  }, [user]);
+
+  const uploadCakeImage = useCallback(async (file: File): Promise<string | null> => {
+    if (!user) return null;
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('cake-photos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('cake-photos')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Could not upload image.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  }, [user]);
+
+  const deleteCakeImage = useCallback(async (imageUrl: string) => {
+    if (!user) return;
+
+    try {
+      // Extract file path from URL
+      const urlParts = imageUrl.split('/cake-photos/');
+      if (urlParts.length < 2) return;
+      
+      const filePath = urlParts[1];
+
+      const { error } = await supabase.storage
+        .from('cake-photos')
+        .remove([filePath]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting image:', error);
+    }
+  }, [user]);
+
   return (
     <OrderContext.Provider value={{
       orders,
@@ -723,6 +825,9 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       clearAllData,
       syncWithShopify,
       clearSyncWarnings,
+      updateOrderDetails,
+      uploadCakeImage,
+      deleteCakeImage,
     }}>
       {children}
     </OrderContext.Provider>
