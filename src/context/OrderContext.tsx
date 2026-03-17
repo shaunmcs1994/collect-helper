@@ -379,8 +379,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           const { data: { session } } = await supabase.auth.getSession();
           await supabase.functions.invoke('shopify-unfulfill', {
             body: { 
-              orderNumber: order.orderNumber,
-              shopifyOrderId: order.shopifyOrderId 
+              orderNumber: order.orderNumber
             },
             headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined
           });
