@@ -4,7 +4,7 @@ project_id = "sruuefrhbnbvmfetomji"
 verify_jwt = false
 
 [functions.shopify-fulfill]
-verify_jwt = true
+verify_jwt = false
 
 [functions.shopify-unfulfill]
-verify_jwt = true
+verify_jwt = false
