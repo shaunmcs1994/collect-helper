@@ -11,6 +11,22 @@ interface SyncWarnings {
   syncError: Array<{ orderNumber: string; tags: string; customerName: string }>;
 }
 
+interface PrintLog {
+  id: string;
+  collection_date: string;
+  printed_at: string;
+  printed_by: string | null;
+  location_filter: string;
+  order_count: number;
+}
+
+interface PrintWarning {
+  collectionDate: string;
+  newOrderCount: number;
+  printedAt: string;
+  orders: Order[];
+}
+
 interface OrderContextType {
   orders: Order[];
   backups: Backup[];
@@ -20,6 +36,8 @@ interface OrderContextType {
   syncWarnings: SyncWarnings | null;
   productEmojis: Record<string, string>;
   productColors: Record<string, string>;
+  printLogs: PrintLog[];
+  printWarnings: PrintWarning[];
   getDisplayName: (userId: string) => string;
   importOrders: (orders: Order[]) => Promise<void>;
   addOrder: (order: Order) => Promise<void>;
@@ -42,6 +60,9 @@ interface OrderContextType {
   updateOrderDetails: (orderId: string, details: { isCustomCake?: boolean; customNotes?: string; customImages?: string[] }) => Promise<void>;
   uploadCakeImage: (file: File) => Promise<string | null>;
   deleteCakeImage: (imageUrl: string) => Promise<void>;
+  logPrint: (dates: string[], location: string, count: number) => Promise<void>;
+  clearPrintWarnings: () => void;
+  getLatestPrintLog: (date: string) => PrintLog | undefined;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
@@ -58,6 +79,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [syncWarnings, setSyncWarnings] = useState<SyncWarnings | null>(null);
+  const [printLogs, setPrintLogs] = useState<PrintLog[]>([]);
+  const [printWarnings, setPrintWarnings] = useState<PrintWarning[]>([]);
   const { user, displayName } = useAuth();
 
   // Load data from Supabase on mount and when user changes
@@ -65,6 +88,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setOrders([]);
       setProductEmojis({});
+      setPrintLogs([]);
+      setPrintWarnings([]);
       setIsLoading(false);
       return;
     }
@@ -72,6 +97,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     loadOrders();
     loadProductEmojis();
     loadProfiles();
+    loadPrintLogs();
     
     // Set up real-time subscriptions
     const ordersChannel = supabase
@@ -112,6 +138,44 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
+  // Compute print warnings whenever orders or printLogs change
+  useEffect(() => {
+    if (printLogs.length === 0 || orders.length === 0) {
+      setPrintWarnings([]);
+      return;
+    }
+
+    // For each date that has been printed, find the latest print log
+    const latestPrintByDate: Record<string, PrintLog> = {};
+    printLogs.forEach(log => {
+      const existing = latestPrintByDate[log.collection_date];
+      if (!existing || new Date(log.printed_at) > new Date(existing.printed_at)) {
+        latestPrintByDate[log.collection_date] = log;
+      }
+    });
+
+    // Find orders created after the last print for their collection date
+    const warnings: PrintWarning[] = [];
+    Object.entries(latestPrintByDate).forEach(([date, log]) => {
+      const printedAt = new Date(log.printed_at);
+      const newOrders = orders.filter(o => 
+        o.collectionDate === date && 
+        o.status === 'pending' &&
+        new Date(o.createdAt || '') > printedAt
+      );
+      if (newOrders.length > 0) {
+        warnings.push({
+          collectionDate: date,
+          newOrderCount: newOrders.length,
+          printedAt: log.printed_at,
+          orders: newOrders,
+        });
+      }
+    });
+
+    setPrintWarnings(warnings);
+  }, [orders, printLogs]);
+
   const loadOrders = async () => {
     try {
       const { data, error } = await supabase
@@ -126,13 +190,14 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           id: row.id,
           orderNumber: row.order_number,
           collectionName: row.customer_name,
-          collectionDate: row.collection_date, // Now stored as full date YYYY-MM-DD
+          collectionDate: row.collection_date,
           collectionLocation: row.collection_location,
           pickupTime: (row as any).pickup_time || undefined,
           products: row.products as { name: string; quantity: number }[],
           status: row.status as 'pending' | 'collected',
           collectedAt: row.collected_at || undefined,
           collectedBy: row.collected_by || undefined,
+          createdAt: row.created_at,
           isCustomCake: (row as any).is_custom_cake || false,
           customNotes: (row as any).custom_notes || undefined,
           customImages: (row as any).custom_images || [],
@@ -197,6 +262,20 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loadPrintLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('print_logs')
+        .select('*')
+        .order('printed_at', { ascending: false });
+
+      if (error) throw error;
+      setPrintLogs((data || []) as PrintLog[]);
+    } catch (error) {
+      console.error('Error loading print logs:', error);
+    }
+  };
+
   const getDisplayName = useCallback((userId: string): string => {
     return profiles[userId] || 'Staff';
   }, [profiles]);
@@ -205,17 +284,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      // Create backup before import
       if (orders.length > 0) {
         createBackupInternal();
       }
 
-      // Clear existing orders
       await supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
-      // Insert new orders
       for (const order of newOrders) {
-        // Handle both old format ('23', '24') and new format (YYYY-MM-DD)
         let collectionDateStr = order.collectionDate;
         if (collectionDateStr === '23' || collectionDateStr === '24') {
           const currentYear = new Date().getFullYear();
@@ -257,7 +332,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      // Handle both old format ('23', '24') and new format (YYYY-MM-DD)
       let collectionDateStr = order.collectionDate;
       if (collectionDateStr === '23' || collectionDateStr === '24') {
         const currentYear = new Date().getFullYear();
@@ -301,10 +375,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      // Get the order to check if it has a Shopify order ID
       const order = orders.find(o => o.id === orderId);
       
-      // Optimistic update for immediate feedback
       setOrders(prev => prev.map(o => {
         if (o.id === orderId && o.status === 'pending') {
           return {
@@ -317,19 +389,15 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         return o;
       }));
 
-      // Trigger Shopify fulfillment in background for orders with an order number
       if (order?.orderNumber) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           await supabase.functions.invoke('shopify-fulfill', {
-            body: { 
-              orderNumber: order.orderNumber
-            },
+            body: { orderNumber: order.orderNumber },
             headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined
           });
         } catch (fulfillError) {
           console.error('Shopify fulfillment failed:', fulfillError);
-          // Don't show error to user - collection still succeeded locally
         }
       }
     } catch (error) {
@@ -345,7 +413,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const markAsPending = useCallback(async (orderId: string) => {
     if (!user) return;
 
-    // Get the order first to check for Shopify info
     const order = orders.find(o => o.id === orderId);
 
     try {
@@ -360,7 +427,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      // Optimistic update
       setOrders(prev => prev.map(o => {
         if (o.id === orderId) {
           return {
@@ -373,20 +439,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         return o;
       }));
 
-      // If order has Shopify ID, trigger unfulfillment in background
       if (order?.orderNumber) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           await supabase.functions.invoke('shopify-unfulfill', {
-            body: { 
-              orderNumber: order.orderNumber
-            },
+            body: { orderNumber: order.orderNumber },
             headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined
           });
           console.log('Shopify unfulfillment triggered for order:', order.orderNumber);
         } catch (unfulfillError) {
           console.error('Shopify unfulfillment failed:', unfulfillError);
-          // Don't show error to user - revert still succeeded locally
         }
       }
 
@@ -421,7 +483,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   const getStockSummary = useCallback((): StockItem[] => {
     const stockMap = new Map<string, StockItem>();
-    const today = format(new Date(), 'yyyy-MM-dd');
 
     orders.forEach(order => {
       order.products.forEach(product => {
@@ -440,13 +501,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         if (order.status === 'collected') {
           existing.totalCollected += product.quantity;
         } else {
-          // For backwards compatibility, check if date ends with 23 or 24
           if (order.collectionDate.endsWith('-23') || order.collectionDate === '23') {
             existing.remaining23 += product.quantity;
           } else if (order.collectionDate.endsWith('-24') || order.collectionDate === '24') {
             existing.remaining24 += product.quantity;
           }
-          // Track remaining by location
           if (order.collectionLocation.toLowerCase() === 'wilmslow') {
             existing.remainingWilmslow += product.quantity;
           } else if (order.collectionLocation.toLowerCase() === 'manchester') {
@@ -470,7 +529,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     return orders.filter(order => {
       if (!date || date === 'all') return order.status === 'pending';
       if (date === 'today') return order.status === 'pending' && order.collectionDate === today;
-      // Support old format ('23', '24') for backwards compatibility
       if (date === '23' || date === '24') {
         return order.status === 'pending' && order.collectionDate.endsWith(`-${date}`);
       }
@@ -492,7 +550,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      // Upsert the emoji
       const { error } = await supabase
         .from('product_emojis')
         .upsert(
@@ -502,7 +559,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      // Optimistic update
       setProductEmojis(prev => ({
         ...prev,
         [productName]: emoji
@@ -523,7 +579,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     try {
       const colorJson = JSON.stringify(color);
       
-      // Check if record exists
       const { data: existing } = await supabase
         .from('product_emojis')
         .select('product_name')
@@ -531,21 +586,18 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       
       if (existing) {
-        // Update existing record
         const { error } = await supabase
           .from('product_emojis')
           .update({ color: colorJson } as any)
           .eq('product_name', productName);
         if (error) throw error;
       } else {
-        // Insert new record with default emoji
         const { error } = await supabase
           .from('product_emojis')
           .insert({ product_name: productName, emoji: '📦', color: colorJson } as any);
         if (error) throw error;
       }
 
-      // Optimistic update
       setProductColors(prev => ({
         ...prev,
         [productName]: colorJson
@@ -580,13 +632,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
       setLastSyncTime(new Date().toISOString());
       await loadOrders();
+      // Reload print logs to recalculate warnings after sync
+      await loadPrintLogs();
 
-      // Check for warnings about skipped orders
       const warnings = data?.warnings;
       const missingDateOrders = warnings?.missingDateTag || [];
       
       if (missingDateOrders.length > 0) {
-        // Show warning toast with details
         const orderList = missingDateOrders.slice(0, 5).map((o: any) => o.orderNumber).join(', ');
         const moreText = missingDateOrders.length > 5 ? ` and ${missingDateOrders.length - 5} more` : '';
         
@@ -603,7 +655,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         });
       }
       
-      // Store warnings in state for UI display
       if (warnings && (warnings.missingDateTag?.length > 0 || warnings.syncError?.length > 0)) {
         setSyncWarnings(warnings);
       } else {
@@ -717,7 +768,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      // Optimistic update
       setOrders(prev => prev.map(o => {
         if (o.id === orderId) {
           return {
@@ -778,7 +828,6 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      // Extract file path from URL
       const urlParts = imageUrl.split('/cake-photos/');
       if (urlParts.length < 2) return;
       
@@ -794,6 +843,43 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  const logPrint = useCallback(async (dates: string[], location: string, count: number) => {
+    if (!user) return;
+
+    try {
+      const inserts = dates.map(date => ({
+        collection_date: date,
+        printed_by: user.id,
+        location_filter: location,
+        order_count: count,
+      }));
+
+      const { error } = await supabase
+        .from('print_logs')
+        .insert(inserts as any);
+
+      if (error) throw error;
+
+      // Reload print logs
+      await loadPrintLogs();
+
+      toast({
+        title: "Print Logged",
+        description: `Recorded print for ${dates.length} day${dates.length > 1 ? 's' : ''}.`,
+      });
+    } catch (error) {
+      console.error('Error logging print:', error);
+    }
+  }, [user]);
+
+  const clearPrintWarnings = useCallback(() => {
+    setPrintWarnings([]);
+  }, []);
+
+  const getLatestPrintLog = useCallback((date: string): PrintLog | undefined => {
+    return printLogs.find(log => log.collection_date === date);
+  }, [printLogs]);
+
   return (
     <OrderContext.Provider value={{
       orders,
@@ -804,6 +890,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       syncWarnings,
       productEmojis,
       productColors,
+      printLogs,
+      printWarnings,
       getDisplayName,
       importOrders,
       addOrder,
@@ -826,6 +914,9 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       updateOrderDetails,
       uploadCakeImage,
       deleteCakeImage,
+      logPrint,
+      clearPrintWarnings,
+      getLatestPrintLog,
     }}>
       {children}
     </OrderContext.Provider>
