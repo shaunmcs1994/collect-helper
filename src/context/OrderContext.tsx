@@ -317,14 +317,13 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         return o;
       }));
 
-      // If order has Shopify ID, trigger fulfillment in background
-      if (order?.shopifyOrderId) {
+      // Trigger Shopify fulfillment in background for orders with an order number
+      if (order?.orderNumber) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           await supabase.functions.invoke('shopify-fulfill', {
             body: { 
-              orderNumber: order.orderNumber,
-              shopifyOrderId: order.shopifyOrderId 
+              orderNumber: order.orderNumber
             },
             headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined
           });
@@ -380,8 +379,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           const { data: { session } } = await supabase.auth.getSession();
           await supabase.functions.invoke('shopify-unfulfill', {
             body: { 
-              orderNumber: order.orderNumber,
-              shopifyOrderId: order.shopifyOrderId 
+              orderNumber: order.orderNumber
             },
             headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined
           });
