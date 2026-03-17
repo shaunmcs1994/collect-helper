@@ -68,6 +68,33 @@ export type Database = {
         }
         Relationships: []
       }
+      print_logs: {
+        Row: {
+          collection_date: string
+          id: string
+          location_filter: string
+          order_count: number
+          printed_at: string
+          printed_by: string | null
+        }
+        Insert: {
+          collection_date: string
+          id?: string
+          location_filter?: string
+          order_count?: number
+          printed_at?: string
+          printed_by?: string | null
+        }
+        Update: {
+          collection_date?: string
+          id?: string
+          location_filter?: string
+          order_count?: number
+          printed_at?: string
+          printed_by?: string | null
+        }
+        Relationships: []
+      }
       product_emojis: {
         Row: {
           color: string | null

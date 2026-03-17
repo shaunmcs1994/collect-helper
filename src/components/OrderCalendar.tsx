@@ -4,7 +4,8 @@ import { Order, Product } from '@/types/order';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, ChevronLeft, ChevronRight, Eye, List, MapPin, Package, Printer, Clock, User as UserIcon, Cake } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar, ChevronLeft, ChevronRight, Eye, List, MapPin, Package, Printer, Clock, User as UserIcon, Cake, AlertTriangle, CheckSquare, X } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
 import { OrderDetailModal } from './OrderDetailModal';
 
@@ -17,31 +18,65 @@ interface DayOrdersProps {
   viewMode: ViewMode;
   isCurrentMonth: boolean;
   onDayClick: (date: Date, orders: Order[]) => void;
+  selectionMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: (dateStr: string) => void;
+  isPrinted: boolean;
+  hasWarning: boolean;
 }
 
-function DayCell({ date, orders, viewMode, isCurrentMonth, onDayClick }: DayOrdersProps) {
+function DayCell({ date, orders, viewMode, isCurrentMonth, onDayClick, selectionMode, isSelected, onToggleSelect, isPrinted, hasWarning }: DayOrdersProps) {
   const isCurrentDay = isToday(date);
   const hasOrders = orders.length > 0;
+  const dateStr = format(date, 'yyyy-MM-dd');
+  const pendingCount = orders.filter(o => o.status === 'pending').length;
+  
+  const handleClick = () => {
+    if (selectionMode && pendingCount > 0) {
+      onToggleSelect(dateStr);
+    } else if (hasOrders) {
+      onDayClick(date, orders);
+    }
+  };
   
   return (
     <div
-      onClick={() => hasOrders && onDayClick(date, orders)}
+      onClick={handleClick}
       className={`
-        min-h-[100px] p-2 border border-border/50 rounded-lg transition-all
+        min-h-[100px] p-2 border border-border/50 rounded-lg transition-all relative
         ${isCurrentMonth ? 'bg-card' : 'bg-muted/30 opacity-60'}
         ${isCurrentDay ? 'ring-2 ring-primary' : ''}
-        ${hasOrders ? 'cursor-pointer hover:bg-secondary/50' : ''}
+        ${hasOrders || (selectionMode && pendingCount > 0) ? 'cursor-pointer hover:bg-secondary/50' : ''}
+        ${selectionMode && isSelected ? 'ring-2 ring-primary bg-primary/10' : ''}
       `}
     >
       <div className="flex items-center justify-between mb-1">
-        <span className={`text-sm font-medium ${isCurrentDay ? 'text-primary' : 'text-muted-foreground'}`}>
-          {format(date, 'd')}
-        </span>
-        {hasOrders && (
-          <Badge variant="secondary" className="text-xs">
-            {orders.length}
-          </Badge>
-        )}
+        <div className="flex items-center gap-1">
+          {selectionMode && pendingCount > 0 && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect(dateStr)}
+              onClick={(e) => e.stopPropagation()}
+              className="h-4 w-4"
+            />
+          )}
+          <span className={`text-sm font-medium ${isCurrentDay ? 'text-primary' : 'text-muted-foreground'}`}>
+            {format(date, 'd')}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          {isPrinted && !hasWarning && (
+            <Printer className="w-3 h-3 text-muted-foreground" />
+          )}
+          {hasWarning && (
+            <AlertTriangle className="w-3 h-3 text-destructive" />
+          )}
+          {hasOrders && (
+            <Badge variant="secondary" className="text-xs">
+              {orders.length}
+            </Badge>
+          )}
+        </div>
       </div>
       
       {viewMode === 'detailed' && orders.slice(0, 3).map((order) => (
@@ -78,7 +113,7 @@ interface CakeCardProps {
 function CakeCard({ order }: CakeCardProps) {
   const totalItems = order.products.reduce((sum, p) => sum + p.quantity, 0);
   const isManchester = order.collectionLocation === 'Manchester';
-  const locationColor = isManchester ? '#3b82f6' : '#eab308'; // Blue for Manchester, Yellow for Wilmslow
+  const locationColor = isManchester ? '#3b82f6' : '#eab308';
   const isCustom = order.isCustomCake;
   
   return (
@@ -105,7 +140,7 @@ function CakeCard({ order }: CakeCardProps) {
         </div>
       </div>
       
-      {/* Location & Time - BIGGER */}
+      {/* Location & Time */}
       <div className="flex items-center justify-between mb-3 pb-3 border-b-2 border-foreground bg-muted/30 -mx-4 px-4 py-2">
         <div className="flex items-center gap-2">
           <div 
@@ -141,7 +176,6 @@ function CakeCard({ order }: CakeCardProps) {
           {order.products.map((product, i) => (
             <div key={i} className="p-2 bg-muted/20 rounded-lg border border-muted">
               <div className="flex gap-3">
-                {/* Product Image */}
                 {product.image_url && (
                   <img 
                     src={product.image_url} 
@@ -170,7 +204,6 @@ function CakeCard({ order }: CakeCardProps) {
                       ×{product.quantity}
                     </span>
                   </div>
-                  {/* Display Infinite Options properties if available */}
                   {product.properties && product.properties.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-muted space-y-0.5">
                       {product.properties.map((prop, j) => (
@@ -245,6 +278,7 @@ interface SelectedDayModalProps {
 }
 
 function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
+  const { logPrint } = useOrders();
   const [printLocation, setPrintLocation] = useState<LocationFilter>('all');
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -252,25 +286,24 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const collectedOrders = orders.filter(o => o.status === 'collected');
   
-  // Separate regular and custom cakes for smart pagination
   const regularOrders = pendingOrders.filter(o => !o.isCustomCake);
   const customOrders = pendingOrders.filter(o => o.isCustomCake);
   
-  // Filter orders for printing
   const printableOrders = useMemo(() => {
     return pendingOrders.filter(o => 
       printLocation === 'all' || o.collectionLocation === printLocation
     ).sort((a, b) => a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase()));
   }, [pendingOrders, printLocation]);
   
-  // Calculate pages - custom cakes get full page, regular cakes are 2 per page
   const filteredRegular = printableOrders.filter(o => !o.isCustomCake);
   const filteredCustom = printableOrders.filter(o => o.isCustomCake);
   const regularPages = Math.ceil(filteredRegular.length / 2);
   const customPages = filteredCustom.length;
   const totalPages = regularPages + customPages;
   
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    await logPrint([dateStr], printLocation, printableOrders.length);
     window.print();
   };
   
@@ -285,12 +318,10 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 margin: 8mm;
               }
             
-              /* Hide everything except the print preview */
               body > *:not(#root) {
                 display: none !important;
               }
             
-              /* The print preview wrapper becomes the only visible content */
               .print-preview-wrapper {
                 position: absolute !important;
                 top: 0 !important;
@@ -301,23 +332,19 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 background: white !important;
               }
             
-              /* Hide the screen-only controls */
               .no-print {
                 display: none !important;
               }
             
-              /* Print area layout */
               #cake-print-area {
                 display: block !important;
                 padding: 0 !important;
               }
             
-              /* Hide the header inside print area */
               #cake-print-area > header {
                 display: none !important;
               }
             
-              /* Page containers - two cakes side by side for regular */
               .cake-page {
                 display: flex !important;
                 flex-direction: row !important;
@@ -334,7 +361,6 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 break-after: auto !important;
               }
             
-              /* Regular cake cards - half page each */
               .cake-card:not(.custom-cake-card) {
                 flex: 1 1 50% !important;
                 max-width: calc(50% - 3mm) !important;
@@ -345,7 +371,6 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 box-sizing: border-box !important;
               }
               
-              /* Custom cake cards - full page */
               .custom-cake-page {
                 display: block !important;
                 width: 100% !important;
@@ -374,7 +399,6 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 object-fit: contain !important;
               }
             
-              /* Force colors to print */
               * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -383,7 +407,6 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           `}
         </style>
         <div className="print-preview-wrapper fixed inset-0 bg-background z-50 overflow-auto">
-          {/* Controls - not printed */}
           <div className="no-print sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between">
             <Button variant="outline" onClick={() => setShowPrintPreview(false)}>
               ← Back
@@ -400,9 +423,7 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
             </Button>
           </div>
           
-          {/* Printable area */}
           <div id="cake-print-area" className="p-4">
-            {/* Header - screen only */}
             <header className="text-center mb-6 print:hidden">
               <h1 className="text-2xl font-bold">Daily Cake Collection Sheet</h1>
               <p className="text-lg">
@@ -414,7 +435,6 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
               </p>
             </header>
             
-            {/* Regular Cake pages - 2 cakes per page */}
             {Array.from({ length: Math.ceil(filteredRegular.length / 2) }).map((_, pageIndex) => {
               const pageOrders = filteredRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
               return (
@@ -426,7 +446,6 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
               );
             })}
             
-            {/* Custom Cake pages - 1 per page */}
             {filteredCustom.map((order) => (
               <div key={`custom-${order.id}`} className="custom-cake-page mb-4">
                 <CakeCard order={order} />
@@ -537,7 +556,6 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                     {order.products.map(p => `${p.name} ×${p.quantity}`).join(', ')}
                   </span>
                 </div>
-                {/* Show product properties if available */}
                 {order.products.some(p => p.properties && p.properties.length > 0) && (
                   <div className="ml-5 text-xs text-muted-foreground">
                     {order.products.map((p, idx) => 
@@ -557,7 +575,6 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           ))}
         </div>
         
-        {/* Order Detail Modal for editing custom cake details */}
         <OrderDetailModal
           order={selectedOrder}
           open={selectedOrder !== null}
@@ -568,12 +585,203 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   );
 }
 
+// Multi-day print preview
+interface MultiDayPrintPreviewProps {
+  dates: string[];
+  orders: Order[];
+  locationFilter: LocationFilter;
+  onClose: () => void;
+}
+
+function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiDayPrintPreviewProps) {
+  const { logPrint } = useOrders();
+  
+  const printableOrders = useMemo(() => {
+    return orders
+      .filter(o => o.status === 'pending')
+      .filter(o => dates.includes(o.collectionDate))
+      .filter(o => locationFilter === 'all' || o.collectionLocation === locationFilter)
+      .sort((a, b) => {
+        const dateCompare = a.collectionDate.localeCompare(b.collectionDate);
+        if (dateCompare !== 0) return dateCompare;
+        return a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase());
+      });
+  }, [orders, dates, locationFilter]);
+
+  const filteredRegular = printableOrders.filter(o => !o.isCustomCake);
+  const filteredCustom = printableOrders.filter(o => o.isCustomCake);
+  const regularPages = Math.ceil(filteredRegular.length / 2);
+  const totalPages = regularPages + filteredCustom.length;
+
+  const sortedDates = [...dates].sort();
+  const dateRangeLabel = sortedDates.length === 1
+    ? formatDateUK(sortedDates[0])
+    : `${formatDateUK(sortedDates[0])} - ${formatDateUK(sortedDates[sortedDates.length - 1])}`;
+
+  const handlePrint = async () => {
+    await logPrint(dates, locationFilter, printableOrders.length);
+    window.print();
+  };
+
+  return (
+    <>
+      <style>
+        {`
+          @media print {
+            @page {
+              size: A4 landscape;
+              margin: 8mm;
+            }
+          
+            body > *:not(#root) {
+              display: none !important;
+            }
+          
+            .print-preview-wrapper {
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100% !important;
+              height: auto !important;
+              overflow: visible !important;
+              background: white !important;
+            }
+          
+            .no-print {
+              display: none !important;
+            }
+          
+            #cake-print-area {
+              display: block !important;
+              padding: 0 !important;
+            }
+          
+            #cake-print-area > header {
+              display: none !important;
+            }
+          
+            .cake-page {
+              display: flex !important;
+              flex-direction: row !important;
+              justify-content: space-between !important;
+              gap: 6mm !important;
+              width: 100% !important;
+              min-height: 180mm !important;
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+          
+            .cake-page:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+          
+            .cake-card:not(.custom-cake-card) {
+              flex: 1 1 50% !important;
+              max-width: calc(50% - 3mm) !important;
+              height: 180mm !important;
+              overflow: hidden !important;
+              border: 1px solid #ccc !important;
+              padding: 4mm !important;
+              box-sizing: border-box !important;
+            }
+            
+            .custom-cake-page {
+              display: block !important;
+              width: 100% !important;
+              min-height: 180mm !important;
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+            
+            .custom-cake-page:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+            
+            .custom-cake-card {
+              width: 100% !important;
+              max-width: 100% !important;
+              height: auto !important;
+              min-height: 180mm !important;
+              border: 2px solid #000 !important;
+              padding: 6mm !important;
+              box-sizing: border-box !important;
+            }
+            
+            .custom-cake-card img {
+              max-height: 60mm !important;
+              object-fit: contain !important;
+            }
+          
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          }
+        `}
+      </style>
+      <div className="print-preview-wrapper fixed inset-0 bg-background z-50 overflow-auto">
+        <div className="no-print sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between">
+          <Button variant="outline" onClick={onClose}>
+            ← Back
+          </Button>
+          <div className="text-center">
+            <p className="text-lg font-medium">{printableOrders.length} cakes to print</p>
+            <p className="text-sm text-muted-foreground">
+              {totalPages} pages • {dates.length} days ({dateRangeLabel})
+            </p>
+          </div>
+          <Button onClick={handlePrint} className="btn-collect">
+            <Printer className="w-5 h-5 mr-2" />
+            Print All Cakes
+          </Button>
+        </div>
+        
+        <div id="cake-print-area" className="p-4">
+          <header className="text-center mb-6 print:hidden">
+            <h1 className="text-2xl font-bold">Cake Collection Sheets</h1>
+            <p className="text-lg">
+              {dateRangeLabel} ({dates.length} days)
+              {locationFilter !== 'all' && ` • ${locationFilter}`}
+            </p>
+            <p className="text-muted-foreground">
+              Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {printableOrders.length} orders
+            </p>
+          </header>
+          
+          {Array.from({ length: Math.ceil(filteredRegular.length / 2) }).map((_, pageIndex) => {
+            const pageOrders = filteredRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
+            return (
+              <div key={`regular-${pageIndex}`} className="cake-page flex gap-4 mb-4">
+                {pageOrders.map((order) => (
+                  <CakeCard key={order.id} order={order} />
+                ))}
+              </div>
+            );
+          })}
+          
+          {filteredCustom.map((order) => (
+            <div key={`custom-${order.id}`} className="custom-cake-page mb-4">
+              <CakeCard order={order} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function OrderCalendar() {
-  const { orders } = useOrders();
+  const { orders, printLogs, printWarnings, getLatestPrintLog } = useOrders();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('summary');
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
   const [selectedDay, setSelectedDay] = useState<{ date: Date; orders: Order[] } | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+  const [showMultiPrint, setShowMultiPrint] = useState(false);
+  const [multiPrintLocation, setMultiPrintLocation] = useState<LocationFilter>('all');
   
   // Filter orders by location
   const filteredOrders = useMemo(() => {
@@ -596,12 +804,25 @@ export function OrderCalendar() {
     
     return grouped;
   }, [filteredOrders]);
+
+  // Dates that have been printed
+  const printedDates = useMemo(() => {
+    const dates = new Set<string>();
+    printLogs.forEach(log => dates.add(log.collection_date));
+    return dates;
+  }, [printLogs]);
+
+  // Dates with warnings
+  const warningDates = useMemo(() => {
+    const dates = new Set<string>();
+    printWarnings.forEach(w => dates.add(w.collectionDate));
+    return dates;
+  }, [printWarnings]);
   
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   
-  // Pad to start on Sunday
   const startDay = monthStart.getDay();
   const paddingDays = Array(startDay).fill(null);
   
@@ -613,6 +834,33 @@ export function OrderCalendar() {
   const handleDayClick = (date: Date, dayOrders: Order[]) => {
     setSelectedDay({ date, orders: dayOrders });
   };
+
+  const handleToggleSelect = (dateStr: string) => {
+    setSelectedDates(prev => {
+      const next = new Set(prev);
+      if (next.has(dateStr)) {
+        next.delete(dateStr);
+      } else {
+        next.add(dateStr);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectionMode = () => {
+    if (selectionMode) {
+      setSelectedDates(new Set());
+    }
+    setSelectionMode(!selectionMode);
+  };
+
+  const selectedOrderCount = useMemo(() => {
+    return orders.filter(o => 
+      o.status === 'pending' && 
+      selectedDates.has(o.collectionDate) &&
+      (multiPrintLocation === 'all' || o.collectionLocation === multiPrintLocation)
+    ).length;
+  }, [orders, selectedDates, multiPrintLocation]);
   
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentDate(direction === 'prev' ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
@@ -621,6 +869,17 @@ export function OrderCalendar() {
   const goToToday = () => {
     setCurrentDate(new Date());
   };
+
+  if (showMultiPrint) {
+    return (
+      <MultiDayPrintPreview
+        dates={Array.from(selectedDates)}
+        orders={orders}
+        locationFilter={multiPrintLocation}
+        onClose={() => setShowMultiPrint(false)}
+      />
+    );
+  }
   
   return (
     <div className="space-y-4">
@@ -643,6 +902,14 @@ export function OrderCalendar() {
         
         <div className="flex items-center gap-2">
           <Button
+            variant={selectionMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleSelectionMode}
+          >
+            <CheckSquare className="w-4 h-4 mr-1" />
+            {selectionMode ? 'Cancel Selection' : 'Select Days to Print'}
+          </Button>
+          <Button
             variant={viewMode === 'summary' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setViewMode('summary')}
@@ -660,6 +927,23 @@ export function OrderCalendar() {
           </Button>
         </div>
       </div>
+
+      {/* Print warnings banner */}
+      {printWarnings.length > 0 && (
+        <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+            <h3 className="font-semibold text-destructive">New orders after printing!</h3>
+          </div>
+          <div className="space-y-1">
+            {printWarnings.map(w => (
+              <p key={w.collectionDate} className="text-sm text-muted-foreground">
+                <strong>{formatDateUK(w.collectionDate)}</strong>: {w.newOrderCount} new order{w.newOrderCount > 1 ? 's' : ''} since last print — please reprint this day.
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
       
       {/* Location Filter */}
       <div className="flex flex-wrap gap-2">
@@ -701,22 +985,28 @@ export function OrderCalendar() {
         
         {/* Days grid */}
         <div className="grid grid-cols-7 gap-1">
-          {/* Padding for start of month */}
           {paddingDays.map((_, i) => (
             <div key={`pad-${i}`} className="min-h-[100px]" />
           ))}
           
-          {/* Actual days */}
-          {daysInMonth.map(date => (
-            <DayCell
-              key={date.toISOString()}
-              date={date}
-              orders={getOrdersForDate(date)}
-              viewMode={viewMode}
-              isCurrentMonth={isSameMonth(date, currentDate)}
-              onDayClick={handleDayClick}
-            />
-          ))}
+          {daysInMonth.map(date => {
+            const dateStr = format(date, 'yyyy-MM-dd');
+            return (
+              <DayCell
+                key={date.toISOString()}
+                date={date}
+                orders={getOrdersForDate(date)}
+                viewMode={viewMode}
+                isCurrentMonth={isSameMonth(date, currentDate)}
+                onDayClick={handleDayClick}
+                selectionMode={selectionMode}
+                isSelected={selectedDates.has(dateStr)}
+                onToggleSelect={handleToggleSelect}
+                isPrinted={printedDates.has(dateStr)}
+                hasWarning={warningDates.has(dateStr)}
+              />
+            );
+          })}
         </div>
       </Card>
       
@@ -730,7 +1020,62 @@ export function OrderCalendar() {
           <Badge variant="secondary" className="text-xs">N</Badge>
           <span>Order count</span>
         </div>
+        <div className="flex items-center gap-2">
+          <Printer className="w-3 h-3" />
+          <span>Printed</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-3 h-3 text-destructive" />
+          <span>New orders since print</span>
+        </div>
       </div>
+
+      {/* Multi-day selection floating bar */}
+      {selectionMode && selectedDates.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-card border border-border shadow-lg rounded-xl p-4 flex flex-wrap items-center gap-3">
+          <span className="font-semibold text-sm">
+            {selectedDates.size} day{selectedDates.size > 1 ? 's' : ''} selected
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant={multiPrintLocation === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMultiPrintLocation('all')}
+            >
+              All
+            </Button>
+            <Button
+              variant={multiPrintLocation === 'Wilmslow' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMultiPrintLocation('Wilmslow')}
+            >
+              Wilmslow
+            </Button>
+            <Button
+              variant={multiPrintLocation === 'Manchester' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMultiPrintLocation('Manchester')}
+            >
+              Manchester
+            </Button>
+          </div>
+          <Button 
+            onClick={() => setShowMultiPrint(true)}
+            className="btn-collect"
+            disabled={selectedOrderCount === 0}
+          >
+            <Printer className="w-4 h-4 mr-2" />
+            Print {selectedOrderCount} Cakes
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => { setSelectedDates(new Set()); setSelectionMode(false); }}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
       
       {/* Selected day modal */}
       {selectedDay && (
