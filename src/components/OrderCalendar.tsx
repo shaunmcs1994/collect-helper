@@ -278,10 +278,26 @@ interface SelectedDayModalProps {
 }
 
 function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
-  const { logPrint } = useOrders();
+  const { logPrint, getLatestPrintLog } = useOrders();
   const [printLocation, setPrintLocation] = useState<LocationFilter>('all');
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [printNewOnly, setPrintNewOnly] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  
+  const dateStr = format(date, 'yyyy-MM-dd');
+  const latestPrint = getLatestPrintLog(dateStr);
+  
+  // Identify orders that arrived after the last print
+  const newOrderIds = useMemo(() => {
+    if (!latestPrint) return new Set<string>();
+    const printedAt = new Date(latestPrint.printed_at);
+    return new Set(
+      orders.filter(o => 
+        o.status === 'pending' && 
+        new Date(o.createdAt || '') > printedAt
+      ).map(o => o.id)
+    );
+  }, [orders, latestPrint]);
   
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const collectedOrders = orders.filter(o => o.status === 'collected');
@@ -290,10 +306,14 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const customOrders = pendingOrders.filter(o => o.isCustomCake);
   
   const printableOrders = useMemo(() => {
-    return pendingOrders.filter(o => 
+    let filtered = pendingOrders.filter(o => 
       printLocation === 'all' || o.collectionLocation === printLocation
-    ).sort((a, b) => a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase()));
-  }, [pendingOrders, printLocation]);
+    );
+    if (printNewOnly && newOrderIds.size > 0) {
+      filtered = filtered.filter(o => newOrderIds.has(o.id));
+    }
+    return filtered.sort((a, b) => a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase()));
+  }, [pendingOrders, printLocation, printNewOnly, newOrderIds]);
   
   const filteredRegular = printableOrders.filter(o => !o.isCustomCake);
   const filteredCustom = printableOrders.filter(o => o.isCustomCake);
@@ -501,23 +521,59 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
               </Button>
             </div>
             <Button 
-              onClick={() => setShowPrintPreview(true)} 
+              onClick={() => { setPrintNewOnly(false); setShowPrintPreview(true); }} 
               className="w-full"
-              disabled={printableOrders.length === 0}
+              disabled={pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length === 0}
             >
               <Printer className="w-4 h-4 mr-2" />
-              Print {printableOrders.length} Cake Sheets
+              Print All {pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length} Cake Sheets
             </Button>
+            {newOrderIds.size > 0 && (
+              <Button 
+                onClick={() => { setPrintNewOnly(true); setShowPrintPreview(true); }} 
+                className="w-full mt-2"
+                variant="destructive"
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Print {newOrderIds.size} New Order{newOrderIds.size > 1 ? 's' : ''} Only
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {/* New orders warning banner inside modal */}
+        {newOrderIds.size > 0 && (
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
+              <p className="text-sm font-medium text-destructive">
+                {newOrderIds.size} new order{newOrderIds.size > 1 ? 's' : ''} arrived since last print — highlighted below in red.
+              </p>
+            </div>
           </div>
         )}
         
         <div className="space-y-3">
-          {orders.map((order) => (
+          {orders.map((order) => {
+            const isNewOrder = newOrderIds.has(order.id);
+            return (
             <div 
               key={order.id} 
-              className={`p-4 rounded-lg border cursor-pointer hover:bg-secondary/50 transition-colors ${order.status === 'collected' ? 'bg-muted/50 border-muted' : 'bg-card border-border'}`}
+              className={`p-4 rounded-lg border cursor-pointer hover:bg-secondary/50 transition-colors ${
+                isNewOrder 
+                  ? 'bg-destructive/10 border-destructive ring-2 ring-destructive/30' 
+                  : order.status === 'collected' 
+                    ? 'bg-muted/50 border-muted' 
+                    : 'bg-card border-border'
+              }`}
               onClick={() => setSelectedOrder(order)}
             >
+              {isNewOrder && (
+                <div className="flex items-center gap-1 mb-2">
+                  <AlertTriangle className="w-3 h-3 text-destructive" />
+                  <span className="text-xs font-bold text-destructive uppercase">New since last print</span>
+                </div>
+              )}
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div>
@@ -572,7 +628,8 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         
         <OrderDetailModal
@@ -935,11 +992,24 @@ export function OrderCalendar() {
             <AlertTriangle className="w-5 h-5 text-destructive" />
             <h3 className="font-semibold text-destructive">New orders after printing!</h3>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {printWarnings.map(w => (
-              <p key={w.collectionDate} className="text-sm text-muted-foreground">
-                <strong>{formatDateUK(w.collectionDate)}</strong>: {w.newOrderCount} new order{w.newOrderCount > 1 ? 's' : ''} since last print — please reprint this day.
-              </p>
+              <div key={w.collectionDate} className="flex items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">
+                  <strong>{formatDateUK(w.collectionDate)}</strong>: {w.newOrderCount} new order{w.newOrderCount > 1 ? 's' : ''} since last print
+                </p>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    const d = new Date(w.collectionDate + 'T12:00:00');
+                    setSelectedDay({ date: d, orders: orders.filter(o => o.collectionDate === w.collectionDate) });
+                  }}
+                >
+                  <Eye className="w-3 h-3 mr-1" />
+                  View & Print New
+                </Button>
+              </div>
             ))}
           </div>
         </div>
