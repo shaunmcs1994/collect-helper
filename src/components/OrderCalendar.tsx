@@ -521,13 +521,35 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
               </Button>
             </div>
             <Button 
-              onClick={() => setShowPrintPreview(true)} 
+              onClick={() => { setPrintNewOnly(false); setShowPrintPreview(true); }} 
               className="w-full"
-              disabled={printableOrders.length === 0}
+              disabled={pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length === 0}
             >
               <Printer className="w-4 h-4 mr-2" />
-              Print {printableOrders.length} Cake Sheets
+              Print All {pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length} Cake Sheets
             </Button>
+            {newOrderIds.size > 0 && (
+              <Button 
+                onClick={() => { setPrintNewOnly(true); setShowPrintPreview(true); }} 
+                className="w-full mt-2"
+                variant="destructive"
+              >
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Print {newOrderIds.size} New Order{newOrderIds.size > 1 ? 's' : ''} Only
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {/* New orders warning banner inside modal */}
+        {newOrderIds.size > 0 && (
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
+              <p className="text-sm font-medium text-destructive">
+                {newOrderIds.size} new order{newOrderIds.size > 1 ? 's' : ''} arrived since last print — highlighted below in red.
+              </p>
+            </div>
           </div>
         )}
         
