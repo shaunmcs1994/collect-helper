@@ -586,18 +586,36 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           </div>
         )}
         
+        {/* Select controls */}
+        {pendingOrders.length > 0 && (
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">
+              {selectedOrderIds.size > 0 ? `${selectedOrderIds.size} selected` : 'Tick orders to print a selection'}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={selectAllPending}>Select All</Button>
+              {selectedOrderIds.size > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearSelection}>Clear</Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
           {orders.map((order) => {
             const isNewOrder = newOrderIds.has(order.id);
+            const isChecked = selectedOrderIds.has(order.id);
             return (
             <div 
               key={order.id} 
               className={`p-4 rounded-lg border cursor-pointer hover:bg-secondary/50 transition-colors ${
                 isNewOrder 
                   ? 'bg-destructive/10 border-destructive ring-2 ring-destructive/30' 
-                  : order.status === 'collected' 
-                    ? 'bg-muted/50 border-muted' 
-                    : 'bg-card border-border'
+                  : isChecked
+                    ? 'bg-primary/5 border-primary ring-1 ring-primary/30'
+                    : order.status === 'collected' 
+                      ? 'bg-muted/50 border-muted' 
+                      : 'bg-card border-border'
               }`}
               onClick={() => setSelectedOrder(order)}
             >
