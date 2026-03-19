@@ -541,17 +541,29 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 Manchester ({pendingOrders.filter(o => o.collectionLocation === 'Manchester').length})
               </Button>
             </div>
-            <Button 
-              onClick={() => { setPrintNewOnly(false); setShowPrintPreview(true); }} 
-              className="w-full"
-              disabled={pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length === 0}
-            >
-              <Printer className="w-4 h-4 mr-2" />
-              Print All {pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length} Cake Sheets
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => { setPrintNewOnly(false); setPrintSelectedOnly(false); setShowPrintPreview(true); }} 
+                className="flex-1"
+                disabled={pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length === 0}
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Print All ({pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length})
+              </Button>
+              {selectedOrderIds.size > 0 && (
+                <Button 
+                  onClick={() => { setPrintSelectedOnly(true); setPrintNewOnly(false); setShowPrintPreview(true); }} 
+                  className="flex-1"
+                  variant="secondary"
+                >
+                  <CheckSquare className="w-4 h-4 mr-2" />
+                  Print Selected ({selectedOrderIds.size})
+                </Button>
+              )}
+            </div>
             {newOrderIds.size > 0 && (
               <Button 
-                onClick={() => { setPrintNewOnly(true); setShowPrintPreview(true); }} 
+                onClick={() => { setPrintNewOnly(true); setPrintSelectedOnly(false); setShowPrintPreview(true); }} 
                 className="w-full mt-2"
                 variant="destructive"
               >
