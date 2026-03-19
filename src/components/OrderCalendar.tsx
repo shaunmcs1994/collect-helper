@@ -232,14 +232,14 @@ function CakeCard({ order }: CakeCardProps) {
       {/* Custom Cake Images */}
       {isCustom && order.customImages && order.customImages.length > 0 && (
         <div className="mb-3">
-          <h4 className="text-sm font-bold mb-2">Reference Images:</h4>
-          <div className="grid grid-cols-2 gap-2">
+          <h4 className="text-sm font-bold mb-2">📷 Reference Images:</h4>
+          <div className="flex flex-wrap gap-3">
             {order.customImages.map((url, i) => (
               <img 
                 key={i}
                 src={url} 
                 alt={`Reference ${i + 1}`}
-                className="w-full h-24 object-cover rounded border"
+                className="custom-cake-ref-img w-36 h-36 object-contain rounded border-2 border-foreground bg-white"
               />
             ))}
           </div>
