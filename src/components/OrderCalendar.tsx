@@ -554,12 +554,26 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
         )}
         
         <div className="space-y-3">
-          {orders.map((order) => (
+          {orders.map((order) => {
+            const isNewOrder = newOrderIds.has(order.id);
+            return (
             <div 
               key={order.id} 
-              className={`p-4 rounded-lg border cursor-pointer hover:bg-secondary/50 transition-colors ${order.status === 'collected' ? 'bg-muted/50 border-muted' : 'bg-card border-border'}`}
+              className={`p-4 rounded-lg border cursor-pointer hover:bg-secondary/50 transition-colors ${
+                isNewOrder 
+                  ? 'bg-destructive/10 border-destructive ring-2 ring-destructive/30' 
+                  : order.status === 'collected' 
+                    ? 'bg-muted/50 border-muted' 
+                    : 'bg-card border-border'
+              }`}
               onClick={() => setSelectedOrder(order)}
             >
+              {isNewOrder && (
+                <div className="flex items-center gap-1 mb-2">
+                  <AlertTriangle className="w-3 h-3 text-destructive" />
+                  <span className="text-xs font-bold text-destructive uppercase">New since last print</span>
+                </div>
+              )}
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <div>
