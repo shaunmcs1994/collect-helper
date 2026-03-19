@@ -282,6 +282,8 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const [printLocation, setPrintLocation] = useState<LocationFilter>('all');
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [printNewOnly, setPrintNewOnly] = useState(false);
+  const [printSelectedOnly, setPrintSelectedOnly] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
   const dateStr = format(date, 'yyyy-MM-dd');
@@ -304,16 +306,35 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   
   const regularOrders = pendingOrders.filter(o => !o.isCustomCake);
   const customOrders = pendingOrders.filter(o => o.isCustomCake);
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+
+  const selectAllPending = () => {
+    setSelectedOrderIds(new Set(pendingOrders.map(o => o.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedOrderIds(new Set());
+  };
   
   const printableOrders = useMemo(() => {
     let filtered = pendingOrders.filter(o => 
       printLocation === 'all' || o.collectionLocation === printLocation
     );
-    if (printNewOnly && newOrderIds.size > 0) {
+    if (printSelectedOnly && selectedOrderIds.size > 0) {
+      filtered = filtered.filter(o => selectedOrderIds.has(o.id));
+    } else if (printNewOnly && newOrderIds.size > 0) {
       filtered = filtered.filter(o => newOrderIds.has(o.id));
     }
     return filtered.sort((a, b) => a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase()));
-  }, [pendingOrders, printLocation, printNewOnly, newOrderIds]);
+  }, [pendingOrders, printLocation, printNewOnly, printSelectedOnly, selectedOrderIds, newOrderIds]);
   
   const filteredRegular = printableOrders.filter(o => !o.isCustomCake);
   const filteredCustom = printableOrders.filter(o => o.isCustomCake);
