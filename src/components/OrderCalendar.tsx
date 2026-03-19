@@ -992,11 +992,24 @@ export function OrderCalendar() {
             <AlertTriangle className="w-5 h-5 text-destructive" />
             <h3 className="font-semibold text-destructive">New orders after printing!</h3>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {printWarnings.map(w => (
-              <p key={w.collectionDate} className="text-sm text-muted-foreground">
-                <strong>{formatDateUK(w.collectionDate)}</strong>: {w.newOrderCount} new order{w.newOrderCount > 1 ? 's' : ''} since last print — please reprint this day.
-              </p>
+              <div key={w.collectionDate} className="flex items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">
+                  <strong>{formatDateUK(w.collectionDate)}</strong>: {w.newOrderCount} new order{w.newOrderCount > 1 ? 's' : ''} since last print
+                </p>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    const d = new Date(w.collectionDate + 'T12:00:00');
+                    setSelectedDay({ date: d, orders: orders.filter(o => o.collectionDate === w.collectionDate) });
+                  }}
+                >
+                  <Eye className="w-3 h-3 mr-1" />
+                  View & Print New
+                </Button>
+              </div>
             ))}
           </div>
         </div>
