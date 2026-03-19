@@ -435,10 +435,20 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 box-sizing: border-box !important;
               }
               
-              .custom-cake-card img {
-                max-height: 60mm !important;
-                object-fit: contain !important;
-              }
+               .custom-cake-card .custom-cake-ref-img {
+                 width: 45mm !important;
+                 height: 45mm !important;
+                 object-fit: contain !important;
+                 display: inline-block !important;
+                 visibility: visible !important;
+               }
+               
+               .custom-cake-card img {
+                 max-height: 60mm !important;
+                 object-fit: contain !important;
+                 display: inline-block !important;
+                 visibility: visible !important;
+               }
             
               * {
                 -webkit-print-color-adjust: exact !important;
