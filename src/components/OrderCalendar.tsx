@@ -628,7 +628,8 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
         
         <OrderDetailModal
