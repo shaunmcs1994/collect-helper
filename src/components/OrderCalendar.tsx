@@ -278,10 +278,26 @@ interface SelectedDayModalProps {
 }
 
 function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
-  const { logPrint } = useOrders();
+  const { logPrint, getLatestPrintLog } = useOrders();
   const [printLocation, setPrintLocation] = useState<LocationFilter>('all');
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [printNewOnly, setPrintNewOnly] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  
+  const dateStr = format(date, 'yyyy-MM-dd');
+  const latestPrint = getLatestPrintLog(dateStr);
+  
+  // Identify orders that arrived after the last print
+  const newOrderIds = useMemo(() => {
+    if (!latestPrint) return new Set<string>();
+    const printedAt = new Date(latestPrint.printed_at);
+    return new Set(
+      orders.filter(o => 
+        o.status === 'pending' && 
+        new Date(o.createdAt || '') > printedAt
+      ).map(o => o.id)
+    );
+  }, [orders, latestPrint]);
   
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const collectedOrders = orders.filter(o => o.status === 'collected');
