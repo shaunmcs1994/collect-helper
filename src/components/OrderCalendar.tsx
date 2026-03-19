@@ -306,10 +306,14 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const customOrders = pendingOrders.filter(o => o.isCustomCake);
   
   const printableOrders = useMemo(() => {
-    return pendingOrders.filter(o => 
+    let filtered = pendingOrders.filter(o => 
       printLocation === 'all' || o.collectionLocation === printLocation
-    ).sort((a, b) => a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase()));
-  }, [pendingOrders, printLocation]);
+    );
+    if (printNewOnly && newOrderIds.size > 0) {
+      filtered = filtered.filter(o => newOrderIds.has(o.id));
+    }
+    return filtered.sort((a, b) => a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase()));
+  }, [pendingOrders, printLocation, printNewOnly, newOrderIds]);
   
   const filteredRegular = printableOrders.filter(o => !o.isCustomCake);
   const filteredCustom = printableOrders.filter(o => o.isCustomCake);
