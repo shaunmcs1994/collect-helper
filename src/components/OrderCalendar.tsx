@@ -188,7 +188,7 @@ function CakeCard({ order }: CakeCardProps) {
                     <div className="flex-1">
                       <span className="text-base font-bold block">{product.name}</span>
                       {product.variant_title && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-lg font-bold text-foreground">
                           {product.variant_title}
                         </p>
                       )}
