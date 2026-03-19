@@ -627,6 +627,14 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
               )}
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
+                  {order.status === 'pending' && (
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => toggleOrderSelection(order.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-5 w-5 mt-1"
+                    />
+                  )}
                   <div>
                     <h3 className="font-bold text-lg">{order.collectionName}</h3>
                     <p className="text-sm text-muted-foreground">Order #{order.orderNumber}</p>
