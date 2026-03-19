@@ -282,6 +282,8 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const [printLocation, setPrintLocation] = useState<LocationFilter>('all');
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [printNewOnly, setPrintNewOnly] = useState(false);
+  const [printSelectedOnly, setPrintSelectedOnly] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
   const dateStr = format(date, 'yyyy-MM-dd');
@@ -304,16 +306,35 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   
   const regularOrders = pendingOrders.filter(o => !o.isCustomCake);
   const customOrders = pendingOrders.filter(o => o.isCustomCake);
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+
+  const selectAllPending = () => {
+    setSelectedOrderIds(new Set(pendingOrders.map(o => o.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedOrderIds(new Set());
+  };
   
   const printableOrders = useMemo(() => {
     let filtered = pendingOrders.filter(o => 
       printLocation === 'all' || o.collectionLocation === printLocation
     );
-    if (printNewOnly && newOrderIds.size > 0) {
+    if (printSelectedOnly && selectedOrderIds.size > 0) {
+      filtered = filtered.filter(o => selectedOrderIds.has(o.id));
+    } else if (printNewOnly && newOrderIds.size > 0) {
       filtered = filtered.filter(o => newOrderIds.has(o.id));
     }
     return filtered.sort((a, b) => a.collectionName.toLowerCase().localeCompare(b.collectionName.toLowerCase()));
-  }, [pendingOrders, printLocation, printNewOnly, newOrderIds]);
+  }, [pendingOrders, printLocation, printNewOnly, printSelectedOnly, selectedOrderIds, newOrderIds]);
   
   const filteredRegular = printableOrders.filter(o => !o.isCustomCake);
   const filteredCustom = printableOrders.filter(o => o.isCustomCake);
@@ -520,17 +541,29 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 Manchester ({pendingOrders.filter(o => o.collectionLocation === 'Manchester').length})
               </Button>
             </div>
-            <Button 
-              onClick={() => { setPrintNewOnly(false); setShowPrintPreview(true); }} 
-              className="w-full"
-              disabled={pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length === 0}
-            >
-              <Printer className="w-4 h-4 mr-2" />
-              Print All {pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length} Cake Sheets
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => { setPrintNewOnly(false); setPrintSelectedOnly(false); setShowPrintPreview(true); }} 
+                className="flex-1"
+                disabled={pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length === 0}
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Print All ({pendingOrders.filter(o => printLocation === 'all' || o.collectionLocation === printLocation).length})
+              </Button>
+              {selectedOrderIds.size > 0 && (
+                <Button 
+                  onClick={() => { setPrintSelectedOnly(true); setPrintNewOnly(false); setShowPrintPreview(true); }} 
+                  className="flex-1"
+                  variant="secondary"
+                >
+                  <CheckSquare className="w-4 h-4 mr-2" />
+                  Print Selected ({selectedOrderIds.size})
+                </Button>
+              )}
+            </div>
             {newOrderIds.size > 0 && (
               <Button 
-                onClick={() => { setPrintNewOnly(true); setShowPrintPreview(true); }} 
+                onClick={() => { setPrintNewOnly(true); setPrintSelectedOnly(false); setShowPrintPreview(true); }} 
                 className="w-full mt-2"
                 variant="destructive"
               >
@@ -553,18 +586,36 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
           </div>
         )}
         
+        {/* Select controls */}
+        {pendingOrders.length > 0 && (
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">
+              {selectedOrderIds.size > 0 ? `${selectedOrderIds.size} selected` : 'Tick orders to print a selection'}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={selectAllPending}>Select All</Button>
+              {selectedOrderIds.size > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearSelection}>Clear</Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
           {orders.map((order) => {
             const isNewOrder = newOrderIds.has(order.id);
+            const isChecked = selectedOrderIds.has(order.id);
             return (
             <div 
               key={order.id} 
               className={`p-4 rounded-lg border cursor-pointer hover:bg-secondary/50 transition-colors ${
                 isNewOrder 
                   ? 'bg-destructive/10 border-destructive ring-2 ring-destructive/30' 
-                  : order.status === 'collected' 
-                    ? 'bg-muted/50 border-muted' 
-                    : 'bg-card border-border'
+                  : isChecked
+                    ? 'bg-primary/5 border-primary ring-1 ring-primary/30'
+                    : order.status === 'collected' 
+                      ? 'bg-muted/50 border-muted' 
+                      : 'bg-card border-border'
               }`}
               onClick={() => setSelectedOrder(order)}
             >
@@ -576,6 +627,14 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
               )}
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
+                  {order.status === 'pending' && (
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => toggleOrderSelection(order.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-5 w-5 mt-1"
+                    />
+                  )}
                   <div>
                     <h3 className="font-bold text-lg">{order.collectionName}</h3>
                     <p className="text-sm text-muted-foreground">Order #{order.orderNumber}</p>
