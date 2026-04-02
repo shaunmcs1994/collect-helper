@@ -68,6 +68,39 @@ export type Database = {
         }
         Relationships: []
       }
+      print_log_orders: {
+        Row: {
+          id: string
+          order_id: string
+          print_log_id: string
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          print_log_id: string
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          print_log_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_log_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_log_orders_print_log_id_fkey"
+            columns: ["print_log_id"]
+            isOneToOne: false
+            referencedRelation: "print_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       print_logs: {
         Row: {
           collection_date: string
