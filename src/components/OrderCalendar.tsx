@@ -344,7 +344,7 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   
   const handlePrint = async () => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    await logPrint([dateStr], printLocation, printableOrders.length);
+    await logPrint([dateStr], printLocation, printableOrders.length, printableOrders.map(o => o.id));
     window.print();
   };
   
@@ -745,7 +745,7 @@ function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiD
     : `${formatDateUK(sortedDates[0])} - ${formatDateUK(sortedDates[sortedDates.length - 1])}`;
 
   const handlePrint = async () => {
-    await logPrint(dates, locationFilter, printableOrders.length);
+    await logPrint(dates, locationFilter, printableOrders.length, printableOrders.map(o => o.id));
     window.print();
   };
 

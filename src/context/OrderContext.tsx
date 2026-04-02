@@ -60,7 +60,7 @@ interface OrderContextType {
   updateOrderDetails: (orderId: string, details: { isCustomCake?: boolean; customNotes?: string; customImages?: string[] }) => Promise<void>;
   uploadCakeImage: (file: File) => Promise<string | null>;
   deleteCakeImage: (imageUrl: string) => Promise<void>;
-  logPrint: (dates: string[], location: string, count: number) => Promise<void>;
+  logPrint: (dates: string[], location: string, count: number, orderIds?: string[]) => Promise<void>;
   clearPrintWarnings: () => void;
   getLatestPrintLog: (date: string) => PrintLog | undefined;
 }
@@ -843,7 +843,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  const logPrint = useCallback(async (dates: string[], location: string, count: number) => {
+  const logPrint = useCallback(async (dates: string[], location: string, count: number, orderIds?: string[]) => {
     if (!user) return;
 
     try {
@@ -854,11 +854,30 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         order_count: count,
       }));
 
-      const { error } = await supabase
+      const { data: printLogData, error } = await supabase
         .from('print_logs')
-        .insert(inserts as any);
+        .insert(inserts as any)
+        .select();
 
       if (error) throw error;
+
+      // Insert order-level audit records if order IDs provided
+      if (orderIds && orderIds.length > 0 && printLogData && printLogData.length > 0) {
+        const orderInserts = printLogData.flatMap((log: any) =>
+          orderIds.map(orderId => ({
+            print_log_id: log.id,
+            order_id: orderId,
+          }))
+        );
+
+        const { error: orderError } = await supabase
+          .from('print_log_orders' as any)
+          .insert(orderInserts);
+
+        if (orderError) {
+          console.error('Error logging print order details:', orderError);
+        }
+      }
 
       // Reload print logs
       await loadPrintLogs();
