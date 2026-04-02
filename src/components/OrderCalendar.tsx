@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar, ChevronLeft, ChevronRight, Eye, List, MapPin, Package, Printer, Clock, User as UserIcon, Cake, AlertTriangle, CheckSquare, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Eye, List, MapPin, Package, Printer, Clock, User as UserIcon, Cake, AlertTriangle, CheckSquare, X, CircleCheck, CircleX, RotateCcw } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
 import { OrderDetailModal } from './OrderDetailModal';
 
