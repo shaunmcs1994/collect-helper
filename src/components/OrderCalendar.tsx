@@ -409,6 +409,8 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const [printSelectedOnly, setPrintSelectedOnly] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showPrintConfirmation, setShowPrintConfirmation] = useState(false);
+  const [reprintOrderIds, setReprintOrderIds] = useState<Set<string> | null>(null);
   
   const dateStr = format(date, 'yyyy-MM-dd');
   const latestPrint = getLatestPrintLog(dateStr);
