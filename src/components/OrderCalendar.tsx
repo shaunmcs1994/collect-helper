@@ -472,8 +472,33 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
     const dateStr = format(date, 'yyyy-MM-dd');
     await logPrint([dateStr], printLocation, printableOrders.length, printableOrders.map(o => o.id));
     window.print();
+    setShowPrintConfirmation(true);
   };
-  
+
+  const handleReprintSelected = (failedIds: string[]) => {
+    setReprintOrderIds(new Set(failedIds));
+    setShowPrintConfirmation(false);
+  };
+
+  const handleReprintAll = () => {
+    setReprintOrderIds(null);
+    setShowPrintConfirmation(false);
+    // Just close confirmation, they can print again from preview
+  };
+
+  const handleConfirmPrintOk = () => {
+    setShowPrintConfirmation(false);
+    setShowPrintPreview(false);
+  };
+
+  // If reprinting selected orders, filter printableOrders
+  const displayOrders = reprintOrderIds 
+    ? printableOrders.filter(o => reprintOrderIds.has(o.id))
+    : printableOrders;
+  const displayRegular = displayOrders.filter(o => !o.isCustomCake);
+  const displayCustom = displayOrders.filter(o => o.isCustomCake);
+  const displayRegularPages = Math.ceil(displayRegular.length / 2);
+  const displayTotalPages = displayRegularPages + displayCustom.length;
   if (showPrintPreview) {
     return (
       <>
