@@ -60,7 +60,7 @@ interface OrderContextType {
   updateOrderDetails: (orderId: string, details: { isCustomCake?: boolean; customNotes?: string; customImages?: string[] }) => Promise<void>;
   uploadCakeImage: (file: File) => Promise<string | null>;
   deleteCakeImage: (imageUrl: string) => Promise<void>;
-  logPrint: (dates: string[], location: string, count: number) => Promise<void>;
+  logPrint: (dates: string[], location: string, count: number, orderIds?: string[]) => Promise<void>;
   clearPrintWarnings: () => void;
   getLatestPrintLog: (date: string) => PrintLog | undefined;
 }
