@@ -344,7 +344,7 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   
   const handlePrint = async () => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    await logPrint([dateStr], printLocation, printableOrders.length);
+    await logPrint([dateStr], printLocation, printableOrders.length, printableOrders.map(o => o.id));
     window.print();
   };
   
