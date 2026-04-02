@@ -882,6 +882,8 @@ interface MultiDayPrintPreviewProps {
 
 function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiDayPrintPreviewProps) {
   const { logPrint } = useOrders();
+  const [showPrintConfirmation, setShowPrintConfirmation] = useState(false);
+  const [reprintOrderIds, setReprintOrderIds] = useState<Set<string> | null>(null);
   
   const printableOrders = useMemo(() => {
     return orders
@@ -895,20 +897,42 @@ function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiD
       });
   }, [orders, dates, locationFilter]);
 
-  const filteredRegular = printableOrders.filter(o => !o.isCustomCake);
-  const filteredCustom = printableOrders.filter(o => o.isCustomCake);
-  const regularPages = Math.ceil(filteredRegular.length / 2);
-  const totalPages = regularPages + filteredCustom.length;
-
   const sortedDates = [...dates].sort();
   const dateRangeLabel = sortedDates.length === 1
     ? formatDateUK(sortedDates[0])
     : `${formatDateUK(sortedDates[0])} - ${formatDateUK(sortedDates[sortedDates.length - 1])}`;
 
   const handlePrint = async () => {
-    await logPrint(dates, locationFilter, printableOrders.length, printableOrders.map(o => o.id));
+    const ordersToPrint = reprintOrderIds 
+      ? printableOrders.filter(o => reprintOrderIds.has(o.id))
+      : printableOrders;
+    await logPrint(dates, locationFilter, ordersToPrint.length, ordersToPrint.map(o => o.id));
     window.print();
+    setShowPrintConfirmation(true);
   };
+
+  const handleReprintSelected = (failedIds: string[]) => {
+    setReprintOrderIds(new Set(failedIds));
+    setShowPrintConfirmation(false);
+  };
+
+  const handleReprintAll = () => {
+    setReprintOrderIds(null);
+    setShowPrintConfirmation(false);
+  };
+
+  const handleConfirmPrintOk = () => {
+    setShowPrintConfirmation(false);
+    onClose();
+  };
+
+  const displayOrders = reprintOrderIds 
+    ? printableOrders.filter(o => reprintOrderIds.has(o.id))
+    : printableOrders;
+  const displayRegular = displayOrders.filter(o => !o.isCustomCake);
+  const displayCustom = displayOrders.filter(o => o.isCustomCake);
+  const displayRegularPages = Math.ceil(displayRegular.length / 2);
+  const displayTotalPages = displayRegularPages + displayCustom.length;
 
   return (
     <>
@@ -1014,14 +1038,16 @@ function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiD
             ← Back
           </Button>
           <div className="text-center">
-            <p className="text-lg font-medium">{printableOrders.length} cakes to print</p>
+            <p className="text-lg font-medium">
+              {reprintOrderIds ? `Reprinting ${displayOrders.length} failed order${displayOrders.length !== 1 ? 's' : ''}` : `${displayOrders.length} cakes to print`}
+            </p>
             <p className="text-sm text-muted-foreground">
-              {totalPages} pages • {dates.length} days ({dateRangeLabel})
+              {displayTotalPages} pages • {dates.length} days ({dateRangeLabel})
             </p>
           </div>
           <Button onClick={handlePrint} className="btn-collect">
             <Printer className="w-5 h-5 mr-2" />
-            Print All Cakes
+            {reprintOrderIds ? 'Reprint' : 'Print All Cakes'}
           </Button>
         </div>
         
@@ -1033,12 +1059,12 @@ function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiD
               {locationFilter !== 'all' && ` • ${locationFilter}`}
             </p>
             <p className="text-muted-foreground">
-              Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {printableOrders.length} orders
+              Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {displayOrders.length} orders
             </p>
           </header>
           
-          {Array.from({ length: Math.ceil(filteredRegular.length / 2) }).map((_, pageIndex) => {
-            const pageOrders = filteredRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
+          {Array.from({ length: Math.ceil(displayRegular.length / 2) }).map((_, pageIndex) => {
+            const pageOrders = displayRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
             return (
               <div key={`regular-${pageIndex}`} className="cake-page flex gap-4 mb-4">
                 {pageOrders.map((order) => (
@@ -1048,13 +1074,21 @@ function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiD
             );
           })}
           
-          {filteredCustom.map((order) => (
+          {displayCustom.map((order) => (
             <div key={`custom-${order.id}`} className="custom-cake-page mb-4">
               <CakeCard order={order} />
             </div>
           ))}
         </div>
       </div>
+      {showPrintConfirmation && (
+        <PrintConfirmationDialog
+          orders={displayOrders}
+          onConfirm={handleConfirmPrintOk}
+          onReprintSelected={handleReprintSelected}
+          onReprintAll={handleReprintAll}
+        />
+      )}
     </>
   );
 }
