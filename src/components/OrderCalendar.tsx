@@ -469,8 +469,11 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const totalPages = regularPages + customPages;
   
   const handlePrint = async () => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    await logPrint([dateStr], printLocation, printableOrders.length, printableOrders.map(o => o.id));
+    const dStr = format(date, 'yyyy-MM-dd');
+    const ordersToPrint = reprintOrderIds 
+      ? printableOrders.filter(o => reprintOrderIds.has(o.id))
+      : printableOrders;
+    await logPrint([dStr], printLocation, ordersToPrint.length, ordersToPrint.map(o => o.id));
     window.print();
     setShowPrintConfirmation(true);
   };
