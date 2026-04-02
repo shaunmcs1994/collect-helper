@@ -271,7 +271,131 @@ function CakeCard({ order }: CakeCardProps) {
   );
 }
 
-interface SelectedDayModalProps {
+// Post-print confirmation dialog
+interface PrintConfirmationProps {
+  orders: Order[];
+  onConfirm: () => void;
+  onReprintSelected: (orderIds: string[]) => void;
+  onReprintAll: () => void;
+}
+
+function PrintConfirmationDialog({ orders, onConfirm, onReprintSelected, onReprintAll }: PrintConfirmationProps) {
+  const [allPrintedOk, setAllPrintedOk] = useState<boolean | null>(null);
+  const [failedOrderIds, setFailedOrderIds] = useState<Set<string>>(new Set());
+
+  const toggleFailed = (orderId: string) => {
+    setFailedOrderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+
+  if (allPrintedOk === true) {
+    onConfirm();
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+      <Card className="w-full max-w-lg max-h-[80vh] overflow-auto p-6">
+        {allPrintedOk === null ? (
+          <>
+            <div className="text-center mb-6">
+              <Printer className="w-12 h-12 mx-auto mb-3 text-primary" />
+              <h2 className="text-xl font-bold mb-2">Print Confirmation</h2>
+              <p className="text-muted-foreground">
+                Did all <span className="font-bold text-foreground">{orders.length}</span> orders print correctly?
+              </p>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <Button
+                onClick={() => setAllPrintedOk(true)}
+                className="flex-1 h-14 text-lg gap-2"
+              >
+                <CircleCheck className="w-6 h-6" />
+                Yes, all printed
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setAllPrintedOk(false)}
+                className="flex-1 h-14 text-lg gap-2"
+              >
+                <CircleX className="w-6 h-6" />
+                No, some failed
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mb-4">
+              <h2 className="text-xl font-bold mb-1">Which orders failed to print?</h2>
+              <p className="text-sm text-muted-foreground">
+                Tick the orders that didn't print correctly, then reprint just those — or reprint everything.
+              </p>
+            </div>
+            <div className="space-y-2 mb-4 max-h-[40vh] overflow-auto">
+              {orders.map(order => (
+                <div
+                  key={order.id}
+                  onClick={() => toggleFailed(order.id)}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    failedOrderIds.has(order.id)
+                      ? 'border-destructive bg-destructive/10'
+                      : 'border-border hover:bg-secondary/50'
+                  }`}
+                >
+                  <Checkbox
+                    checked={failedOrderIds.has(order.id)}
+                    onCheckedChange={() => toggleFailed(order.id)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{order.collectionName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      #{order.orderNumber} • {order.products.map(p => p.name).join(', ')}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs flex-shrink-0">
+                    {order.collectionLocation}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-2">
+              {failedOrderIds.size > 0 && (
+                <Button
+                  onClick={() => onReprintSelected(Array.from(failedOrderIds))}
+                  className="w-full gap-2"
+                >
+                  <Printer className="w-4 h-4" />
+                  Reprint {failedOrderIds.size} failed order{failedOrderIds.size !== 1 ? 's' : ''}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={onReprintAll}
+                className="w-full gap-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reprint all {orders.length} orders
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={onConfirm}
+                className="w-full"
+              >
+                Skip — I'll handle it manually
+              </Button>
+            </div>
+          </>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+
   date: Date;
   orders: Order[];
   onClose: () => void;
