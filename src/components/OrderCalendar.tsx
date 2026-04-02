@@ -395,7 +395,7 @@ function PrintConfirmationDialog({ orders, onConfirm, onReprintSelected, onRepri
   );
 }
 
-
+interface SelectedDayModalProps {
   date: Date;
   orders: Order[];
   onClose: () => void;
