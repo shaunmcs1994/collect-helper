@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar, ChevronLeft, ChevronRight, Eye, List, MapPin, Package, Printer, Clock, User as UserIcon, Cake, AlertTriangle, CheckSquare, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Eye, List, MapPin, Package, Printer, Clock, User as UserIcon, Cake, AlertTriangle, CheckSquare, X, CircleCheck, CircleX, RotateCcw } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
 import { OrderDetailModal } from './OrderDetailModal';
 
@@ -271,6 +271,130 @@ function CakeCard({ order }: CakeCardProps) {
   );
 }
 
+// Post-print confirmation dialog
+interface PrintConfirmationProps {
+  orders: Order[];
+  onConfirm: () => void;
+  onReprintSelected: (orderIds: string[]) => void;
+  onReprintAll: () => void;
+}
+
+function PrintConfirmationDialog({ orders, onConfirm, onReprintSelected, onReprintAll }: PrintConfirmationProps) {
+  const [allPrintedOk, setAllPrintedOk] = useState<boolean | null>(null);
+  const [failedOrderIds, setFailedOrderIds] = useState<Set<string>>(new Set());
+
+  const toggleFailed = (orderId: string) => {
+    setFailedOrderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId);
+      else next.add(orderId);
+      return next;
+    });
+  };
+
+  if (allPrintedOk === true) {
+    onConfirm();
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+      <Card className="w-full max-w-lg max-h-[80vh] overflow-auto p-6">
+        {allPrintedOk === null ? (
+          <>
+            <div className="text-center mb-6">
+              <Printer className="w-12 h-12 mx-auto mb-3 text-primary" />
+              <h2 className="text-xl font-bold mb-2">Print Confirmation</h2>
+              <p className="text-muted-foreground">
+                Did all <span className="font-bold text-foreground">{orders.length}</span> orders print correctly?
+              </p>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <Button
+                onClick={() => setAllPrintedOk(true)}
+                className="flex-1 h-14 text-lg gap-2"
+              >
+                <CircleCheck className="w-6 h-6" />
+                Yes, all printed
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setAllPrintedOk(false)}
+                className="flex-1 h-14 text-lg gap-2"
+              >
+                <CircleX className="w-6 h-6" />
+                No, some failed
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mb-4">
+              <h2 className="text-xl font-bold mb-1">Which orders failed to print?</h2>
+              <p className="text-sm text-muted-foreground">
+                Tick the orders that didn't print correctly, then reprint just those — or reprint everything.
+              </p>
+            </div>
+            <div className="space-y-2 mb-4 max-h-[40vh] overflow-auto">
+              {orders.map(order => (
+                <div
+                  key={order.id}
+                  onClick={() => toggleFailed(order.id)}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    failedOrderIds.has(order.id)
+                      ? 'border-destructive bg-destructive/10'
+                      : 'border-border hover:bg-secondary/50'
+                  }`}
+                >
+                  <Checkbox
+                    checked={failedOrderIds.has(order.id)}
+                    onCheckedChange={() => toggleFailed(order.id)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{order.collectionName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      #{order.orderNumber} • {order.products.map(p => p.name).join(', ')}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs flex-shrink-0">
+                    {order.collectionLocation}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-2">
+              {failedOrderIds.size > 0 && (
+                <Button
+                  onClick={() => onReprintSelected(Array.from(failedOrderIds))}
+                  className="w-full gap-2"
+                >
+                  <Printer className="w-4 h-4" />
+                  Reprint {failedOrderIds.size} failed order{failedOrderIds.size !== 1 ? 's' : ''}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={onReprintAll}
+                className="w-full gap-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reprint all {orders.length} orders
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={onConfirm}
+                className="w-full"
+              >
+                Skip — I'll handle it manually
+              </Button>
+            </div>
+          </>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 interface SelectedDayModalProps {
   date: Date;
   orders: Order[];
@@ -285,6 +409,8 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const [printSelectedOnly, setPrintSelectedOnly] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showPrintConfirmation, setShowPrintConfirmation] = useState(false);
+  const [reprintOrderIds, setReprintOrderIds] = useState<Set<string> | null>(null);
   
   const dateStr = format(date, 'yyyy-MM-dd');
   const latestPrint = getLatestPrintLog(dateStr);
@@ -343,11 +469,39 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
   const totalPages = regularPages + customPages;
   
   const handlePrint = async () => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    await logPrint([dateStr], printLocation, printableOrders.length, printableOrders.map(o => o.id));
+    const dStr = format(date, 'yyyy-MM-dd');
+    const ordersToPrint = reprintOrderIds 
+      ? printableOrders.filter(o => reprintOrderIds.has(o.id))
+      : printableOrders;
+    await logPrint([dStr], printLocation, ordersToPrint.length, ordersToPrint.map(o => o.id));
     window.print();
+    setShowPrintConfirmation(true);
   };
-  
+
+  const handleReprintSelected = (failedIds: string[]) => {
+    setReprintOrderIds(new Set(failedIds));
+    setShowPrintConfirmation(false);
+  };
+
+  const handleReprintAll = () => {
+    setReprintOrderIds(null);
+    setShowPrintConfirmation(false);
+    // Just close confirmation, they can print again from preview
+  };
+
+  const handleConfirmPrintOk = () => {
+    setShowPrintConfirmation(false);
+    setShowPrintPreview(false);
+  };
+
+  // If reprinting selected orders, filter printableOrders
+  const displayOrders = reprintOrderIds 
+    ? printableOrders.filter(o => reprintOrderIds.has(o.id))
+    : printableOrders;
+  const displayRegular = displayOrders.filter(o => !o.isCustomCake);
+  const displayCustom = displayOrders.filter(o => o.isCustomCake);
+  const displayRegularPages = Math.ceil(displayRegular.length / 2);
+  const displayTotalPages = displayRegularPages + displayCustom.length;
   if (showPrintPreview) {
     return (
       <>
@@ -459,18 +613,20 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
         </style>
         <div className="print-preview-wrapper fixed inset-0 bg-background z-50 overflow-auto">
           <div className="no-print sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between">
-            <Button variant="outline" onClick={() => setShowPrintPreview(false)}>
+            <Button variant="outline" onClick={() => { setShowPrintPreview(false); setReprintOrderIds(null); }}>
               ← Back
             </Button>
             <div className="text-center">
-              <p className="text-lg font-medium">{printableOrders.length} cakes to print</p>
+              <p className="text-lg font-medium">
+                {reprintOrderIds ? `Reprinting ${displayOrders.length} failed order${displayOrders.length !== 1 ? 's' : ''}` : `${displayOrders.length} cakes to print`}
+              </p>
               <p className="text-sm text-muted-foreground">
-                {totalPages} pages ({filteredRegular.length} regular @ 2/page, {filteredCustom.length} custom @ 1/page)
+                {displayTotalPages} pages ({displayRegular.length} regular @ 2/page, {displayCustom.length} custom @ 1/page)
               </p>
             </div>
             <Button onClick={handlePrint} className="btn-collect">
               <Printer className="w-5 h-5 mr-2" />
-              Print All Cakes
+              {reprintOrderIds ? 'Reprint' : 'Print All Cakes'}
             </Button>
           </div>
           
@@ -482,12 +638,12 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 {printLocation !== 'all' && ` • ${printLocation}`}
               </p>
               <p className="text-muted-foreground">
-                Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {printableOrders.length} orders
+                Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {displayOrders.length} orders
               </p>
             </header>
             
-            {Array.from({ length: Math.ceil(filteredRegular.length / 2) }).map((_, pageIndex) => {
-              const pageOrders = filteredRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
+            {Array.from({ length: Math.ceil(displayRegular.length / 2) }).map((_, pageIndex) => {
+              const pageOrders = displayRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
               return (
                 <div key={`regular-${pageIndex}`} className="cake-page flex gap-4 mb-4">
                   {pageOrders.map((order) => (
@@ -497,13 +653,21 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
               );
             })}
             
-            {filteredCustom.map((order) => (
+            {displayCustom.map((order) => (
               <div key={`custom-${order.id}`} className="custom-cake-page mb-4">
                 <CakeCard order={order} />
               </div>
             ))}
           </div>
         </div>
+        {showPrintConfirmation && (
+          <PrintConfirmationDialog
+            orders={displayOrders}
+            onConfirm={handleConfirmPrintOk}
+            onReprintSelected={handleReprintSelected}
+            onReprintAll={handleReprintAll}
+          />
+        )}
       </>
     );
   }
@@ -721,6 +885,8 @@ interface MultiDayPrintPreviewProps {
 
 function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiDayPrintPreviewProps) {
   const { logPrint } = useOrders();
+  const [showPrintConfirmation, setShowPrintConfirmation] = useState(false);
+  const [reprintOrderIds, setReprintOrderIds] = useState<Set<string> | null>(null);
   
   const printableOrders = useMemo(() => {
     return orders
@@ -734,20 +900,42 @@ function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiD
       });
   }, [orders, dates, locationFilter]);
 
-  const filteredRegular = printableOrders.filter(o => !o.isCustomCake);
-  const filteredCustom = printableOrders.filter(o => o.isCustomCake);
-  const regularPages = Math.ceil(filteredRegular.length / 2);
-  const totalPages = regularPages + filteredCustom.length;
-
   const sortedDates = [...dates].sort();
   const dateRangeLabel = sortedDates.length === 1
     ? formatDateUK(sortedDates[0])
     : `${formatDateUK(sortedDates[0])} - ${formatDateUK(sortedDates[sortedDates.length - 1])}`;
 
   const handlePrint = async () => {
-    await logPrint(dates, locationFilter, printableOrders.length, printableOrders.map(o => o.id));
+    const ordersToPrint = reprintOrderIds 
+      ? printableOrders.filter(o => reprintOrderIds.has(o.id))
+      : printableOrders;
+    await logPrint(dates, locationFilter, ordersToPrint.length, ordersToPrint.map(o => o.id));
     window.print();
+    setShowPrintConfirmation(true);
   };
+
+  const handleReprintSelected = (failedIds: string[]) => {
+    setReprintOrderIds(new Set(failedIds));
+    setShowPrintConfirmation(false);
+  };
+
+  const handleReprintAll = () => {
+    setReprintOrderIds(null);
+    setShowPrintConfirmation(false);
+  };
+
+  const handleConfirmPrintOk = () => {
+    setShowPrintConfirmation(false);
+    onClose();
+  };
+
+  const displayOrders = reprintOrderIds 
+    ? printableOrders.filter(o => reprintOrderIds.has(o.id))
+    : printableOrders;
+  const displayRegular = displayOrders.filter(o => !o.isCustomCake);
+  const displayCustom = displayOrders.filter(o => o.isCustomCake);
+  const displayRegularPages = Math.ceil(displayRegular.length / 2);
+  const displayTotalPages = displayRegularPages + displayCustom.length;
 
   return (
     <>
@@ -853,14 +1041,16 @@ function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiD
             ← Back
           </Button>
           <div className="text-center">
-            <p className="text-lg font-medium">{printableOrders.length} cakes to print</p>
+            <p className="text-lg font-medium">
+              {reprintOrderIds ? `Reprinting ${displayOrders.length} failed order${displayOrders.length !== 1 ? 's' : ''}` : `${displayOrders.length} cakes to print`}
+            </p>
             <p className="text-sm text-muted-foreground">
-              {totalPages} pages • {dates.length} days ({dateRangeLabel})
+              {displayTotalPages} pages • {dates.length} days ({dateRangeLabel})
             </p>
           </div>
           <Button onClick={handlePrint} className="btn-collect">
             <Printer className="w-5 h-5 mr-2" />
-            Print All Cakes
+            {reprintOrderIds ? 'Reprint' : 'Print All Cakes'}
           </Button>
         </div>
         
@@ -872,12 +1062,12 @@ function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiD
               {locationFilter !== 'all' && ` • ${locationFilter}`}
             </p>
             <p className="text-muted-foreground">
-              Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {printableOrders.length} orders
+              Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {displayOrders.length} orders
             </p>
           </header>
           
-          {Array.from({ length: Math.ceil(filteredRegular.length / 2) }).map((_, pageIndex) => {
-            const pageOrders = filteredRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
+          {Array.from({ length: Math.ceil(displayRegular.length / 2) }).map((_, pageIndex) => {
+            const pageOrders = displayRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
             return (
               <div key={`regular-${pageIndex}`} className="cake-page flex gap-4 mb-4">
                 {pageOrders.map((order) => (
@@ -887,13 +1077,21 @@ function MultiDayPrintPreview({ dates, orders, locationFilter, onClose }: MultiD
             );
           })}
           
-          {filteredCustom.map((order) => (
+          {displayCustom.map((order) => (
             <div key={`custom-${order.id}`} className="custom-cake-page mb-4">
               <CakeCard order={order} />
             </div>
           ))}
         </div>
       </div>
+      {showPrintConfirmation && (
+        <PrintConfirmationDialog
+          orders={displayOrders}
+          onConfirm={handleConfirmPrintOk}
+          onReprintSelected={handleReprintSelected}
+          onReprintAll={handleReprintAll}
+        />
+      )}
     </>
   );
 }
