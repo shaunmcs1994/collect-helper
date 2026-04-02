@@ -610,18 +610,20 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
         </style>
         <div className="print-preview-wrapper fixed inset-0 bg-background z-50 overflow-auto">
           <div className="no-print sticky top-0 bg-background border-b border-border p-4 flex items-center justify-between">
-            <Button variant="outline" onClick={() => setShowPrintPreview(false)}>
+            <Button variant="outline" onClick={() => { setShowPrintPreview(false); setReprintOrderIds(null); }}>
               ← Back
             </Button>
             <div className="text-center">
-              <p className="text-lg font-medium">{printableOrders.length} cakes to print</p>
+              <p className="text-lg font-medium">
+                {reprintOrderIds ? `Reprinting ${displayOrders.length} failed order${displayOrders.length !== 1 ? 's' : ''}` : `${displayOrders.length} cakes to print`}
+              </p>
               <p className="text-sm text-muted-foreground">
-                {totalPages} pages ({filteredRegular.length} regular @ 2/page, {filteredCustom.length} custom @ 1/page)
+                {displayTotalPages} pages ({displayRegular.length} regular @ 2/page, {displayCustom.length} custom @ 1/page)
               </p>
             </div>
             <Button onClick={handlePrint} className="btn-collect">
               <Printer className="w-5 h-5 mr-2" />
-              Print All Cakes
+              {reprintOrderIds ? 'Reprint' : 'Print All Cakes'}
             </Button>
           </div>
           
@@ -633,12 +635,12 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 {printLocation !== 'all' && ` • ${printLocation}`}
               </p>
               <p className="text-muted-foreground">
-                Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {printableOrders.length} orders
+                Generated: {format(new Date(), 'dd/MM/yyyy HH:mm')} • {displayOrders.length} orders
               </p>
             </header>
             
-            {Array.from({ length: Math.ceil(filteredRegular.length / 2) }).map((_, pageIndex) => {
-              const pageOrders = filteredRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
+            {Array.from({ length: Math.ceil(displayRegular.length / 2) }).map((_, pageIndex) => {
+              const pageOrders = displayRegular.slice(pageIndex * 2, pageIndex * 2 + 2);
               return (
                 <div key={`regular-${pageIndex}`} className="cake-page flex gap-4 mb-4">
                   {pageOrders.map((order) => (
@@ -648,13 +650,21 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
               );
             })}
             
-            {filteredCustom.map((order) => (
+            {displayCustom.map((order) => (
               <div key={`custom-${order.id}`} className="custom-cake-page mb-4">
                 <CakeCard order={order} />
               </div>
             ))}
           </div>
         </div>
+        {showPrintConfirmation && (
+          <PrintConfirmationDialog
+            orders={displayOrders}
+            onConfirm={handleConfirmPrintOk}
+            onReprintSelected={handleReprintSelected}
+            onReprintAll={handleReprintAll}
+          />
+        )}
       </>
     );
   }
