@@ -1,46 +1,25 @@
 
 
-## Plan: Add Order-Level Print Audit Logging
+## Plan: Fix Shopify Sync Schedule to 8:00 AM UK Time
 
-### What changes
+### Problem
+The daily Shopify sync currently runs at `0 8 * * *` (8:00 AM UTC). During British Summer Time (late March–late October), that's actually 9:00 AM UK time — an hour late.
 
-Currently `print_logs` records *how many* orders were printed but not *which ones*. We'll add a join table that links each print log to the specific order IDs included.
+### Solution
+Update the cron job to run at 7:00 AM UTC (`0 7 * * *`). This gives:
+- **Summer (BST)**: 8:00 AM UK time ✓
+- **Winter (GMT)**: 7:00 AM UK time — one hour early, but orders are ready before staff arrive
 
-### Database migration
+Alternatively, pg_cron does not reliably support timezone-aware scheduling across all Supabase instances, so a fixed UTC offset is the safest approach. 7 AM UTC is the better choice since having orders ready early is preferable to having them arrive late.
 
-Create a new `print_log_orders` table:
+### Changes
+One database operation (no code file changes):
+1. **Unschedule** the existing `daily-shopify-sync` cron job
+2. **Reschedule** it with `0 7 * * *`
 
+This will be done via two SQL statements:
 ```sql
-CREATE TABLE public.print_log_orders (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  print_log_id uuid NOT NULL REFERENCES public.print_logs(id) ON DELETE CASCADE,
-  order_id uuid NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE
-);
-
-ALTER TABLE public.print_log_orders ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Authenticated users can insert print_log_orders"
-  ON public.print_log_orders FOR INSERT TO authenticated WITH CHECK (true);
-
-CREATE POLICY "Authenticated users can view print_log_orders"
-  ON public.print_log_orders FOR SELECT TO authenticated USING (true);
+SELECT cron.unschedule('daily-shopify-sync');
 ```
-
-### Code changes
-
-**`src/context/OrderContext.tsx`** — Update `logPrint` signature to accept an array of order IDs:
-
-- Change signature: `logPrint(dates, location, count)` → `logPrint(dates, location, count, orderIds)`
-- After inserting into `print_logs`, insert rows into `print_log_orders` linking each returned print log ID to the order IDs
-- Use `.select()` on the print_logs insert to get back the generated IDs
-
-**`src/components/OrderCalendar.tsx`** — Pass order IDs when calling `logPrint`:
-
-- In `SelectedDayModal.handlePrint`: pass `printableOrders.map(o => o.id)` as the fourth argument
-- In `MultiDayPrintPreview.handlePrint`: same — pass the IDs of the orders being printed
-
-### Summary
-- 1 new table (`print_log_orders`)
-- 2 files modified (`OrderContext.tsx`, `OrderCalendar.tsx`)
-- No UI changes — this is purely audit logging under the hood
+Then re-create with the new schedule pointing to the same sync endpoint.
 
