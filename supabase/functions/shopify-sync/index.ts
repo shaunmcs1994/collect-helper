@@ -24,6 +24,7 @@ function getLocationFromTags(tags: string[]): string {
   const upperTags = tags.map(t => t.toUpperCase().trim());
   if (upperTags.includes('WILM')) return 'Wilmslow';
   if (upperTags.includes('NQ')) return 'Manchester';
+  if (upperTags.includes('CHESTER')) return 'Chester';
   return 'Unknown';
 }
 

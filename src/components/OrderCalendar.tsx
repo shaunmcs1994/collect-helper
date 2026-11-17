@@ -10,7 +10,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isTod
 import { OrderDetailModal } from './OrderDetailModal';
 
 type ViewMode = 'summary' | 'detailed';
-type LocationFilter = 'all' | 'Wilmslow' | 'Manchester';
+type LocationFilter = 'all' | 'Wilmslow' | 'Manchester' | 'Chester';
 
 interface DayOrdersProps {
   date: Date;
@@ -112,8 +112,7 @@ interface CakeCardProps {
 
 function CakeCard({ order }: CakeCardProps) {
   const totalItems = order.products.reduce((sum, p) => sum + p.quantity, 0);
-  const isManchester = order.collectionLocation === 'Manchester';
-  const locationColor = isManchester ? '#3b82f6' : '#eab308';
+  const locationColor = order.collectionLocation === 'Manchester' ? '#3b82f6' : order.collectionLocation === 'Chester' ? '#16a34a' : '#eab308';
   const isCustom = order.isCustomCake;
   
   return (
@@ -714,6 +713,14 @@ function SelectedDayModal({ date, orders, onClose }: SelectedDayModalProps) {
                 <div className="w-3 h-3 rounded-sm mr-1" style={{ backgroundColor: '#3b82f6' }} />
                 Manchester ({pendingOrders.filter(o => o.collectionLocation === 'Manchester').length})
               </Button>
+              <Button
+                variant={printLocation === 'Chester' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPrintLocation('Chester')}
+              >
+                <div className="w-3 h-3 rounded-sm mr-1" style={{ backgroundColor: '#16a34a' }} />
+                Chester ({pendingOrders.filter(o => o.collectionLocation === 'Chester').length})
+              </Button>
             </div>
             <div className="flex gap-2">
               <Button 
@@ -1307,6 +1314,14 @@ export function OrderCalendar() {
           <MapPin className="w-4 h-4 mr-1" />
           Manchester
         </Button>
+        <Button
+          variant={locationFilter === 'Chester' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setLocationFilter('Chester')}
+        >
+          <MapPin className="w-4 h-4 mr-1" />
+          Chester
+        </Button>
       </div>
       
       {/* Calendar Grid */}
@@ -1394,6 +1409,13 @@ export function OrderCalendar() {
               onClick={() => setMultiPrintLocation('Manchester')}
             >
               Manchester
+            </Button>
+            <Button
+              variant={multiPrintLocation === 'Chester' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setMultiPrintLocation('Chester')}
+            >
+              Chester
             </Button>
           </div>
           <Button 

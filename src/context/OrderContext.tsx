@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Order, Backup, StockItem } from '@/types/order';
 import { toast } from '@/hooks/use-toast';
+import { christmasDates } from '@/utils/christmas';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
@@ -185,7 +186,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         const { data: page, error } = await supabase
           .from('orders')
           .select('*')
-          .or('collection_date.like.%-12-23,collection_date.like.%-12-24')
+          .in('collection_date', christmasDates())
           .order('created_at', { ascending: false })
           .range(from, from + pageSize - 1);
         if (error) throw error;
@@ -503,6 +504,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           remaining24: 0,
           remainingWilmslow: 0,
           remainingManchester: 0,
+          remainingChester: 0,
         };
 
         existing.totalOrdered += product.quantity;
@@ -518,6 +520,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
             existing.remainingWilmslow += product.quantity;
           } else if (order.collectionLocation.toLowerCase() === 'manchester') {
             existing.remainingManchester += product.quantity;
+          } else if (order.collectionLocation.toLowerCase() === 'chester') {
+            existing.remainingChester += product.quantity;
           }
         }
         existing.remaining = existing.totalOrdered - existing.totalCollected;

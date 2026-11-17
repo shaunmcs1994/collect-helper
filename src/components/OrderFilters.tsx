@@ -7,6 +7,7 @@ import { CollectionDate, LocationFilter } from '@/types/order';
 import { CalendarIcon, X } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { christmasDates } from '@/utils/christmas';
 
 // Format ISO date to UK format DD/MM/YYYY
 function formatDateUK(isoDate: string): string {
@@ -73,62 +74,19 @@ export function OrderFilters({
             size="lg"
             className="text-base"
           >
-            All Dates
+            Both Days
           </Button>
-          <Button
-            variant={dateFilter === 'today' || dateFilter === today ? 'default' : 'outline'}
-            onClick={() => onDateChange('today')}
-            size="lg"
-            className="text-base"
-          >
-            Today
-          </Button>
-          
-          {/* Date Picker */}
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant={dateFilter !== 'all' && dateFilter !== 'today' && dateFilter !== today ? 'default' : 'outline'}
-                size="lg"
-                className={cn(
-                  "text-base gap-2",
-                  dateFilter !== 'all' && dateFilter !== 'today' && dateFilter !== today && "pr-2"
-                )}
-              >
-                <CalendarIcon className="w-4 h-4" />
-                {dateFilter !== 'all' && dateFilter !== 'today' && dateFilter !== today 
-                  ? getDateLabel() 
-                  : 'Pick Date'}
-                {dateFilter !== 'all' && dateFilter !== 'today' && dateFilter !== today && (
-                  <X 
-                    className="w-4 h-4 ml-1 hover:text-destructive" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDateChange('all');
-                    }}
-                  />
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={dateFilter !== 'all' && dateFilter !== 'today' ? new Date(dateFilter) : undefined}
-                onSelect={handleDateSelect}
-                className={cn("p-3 pointer-events-auto")}
-                modifiers={{ hasOrders }}
-                modifiersStyles={{ 
-                  hasOrders: { 
-                    backgroundColor: 'hsl(var(--primary) / 0.2)',
-                    fontWeight: 'bold'
-                  } 
-                }}
-              />
-              <div className="px-3 pb-3 text-xs text-muted-foreground">
-                Highlighted dates have orders
-              </div>
-            </PopoverContent>
-          </Popover>
+          {christmasDates().map((d) => (
+            <Button
+              key={d}
+              variant={dateFilter === d ? 'default' : 'outline'}
+              onClick={() => onDateChange(d)}
+              size="lg"
+              className="text-base"
+            >
+              {d.endsWith('-23') ? '23rd Dec' : '24th Dec'}
+            </Button>
+          ))}
         </div>
       </div>
 

@@ -26,8 +26,7 @@ interface CakeCardProps {
 
 function CakeCard({ order }: CakeCardProps) {
   const totalItems = order.products.reduce((sum, p) => sum + p.quantity, 0);
-  const isManchester = order.collectionLocation === 'Manchester';
-  const locationColor = isManchester ? '#3b82f6' : '#eab308';
+  const locationColor = order.collectionLocation === 'Manchester' ? '#3b82f6' : order.collectionLocation === 'Chester' ? '#16a34a' : '#eab308';
   
   return (
     <div className="cake-card border-2 border-foreground rounded-lg p-4 break-inside-avoid bg-white">
@@ -137,7 +136,7 @@ function CakeCard({ order }: CakeCardProps) {
   );
 }
 
-type PrintLocationFilter = 'all' | 'Wilmslow' | 'Manchester';
+type PrintLocationFilter = 'all' | 'Wilmslow' | 'Manchester' | 'Chester';
 
 export default function PendingOrders() {
   const [dateFilter, setDateFilter] = useState<CollectionDate>('today');
@@ -275,6 +274,8 @@ export default function PendingOrders() {
                 <span>Wilmslow</span>
                 <div className="w-4 h-4 rounded-sm border ml-2" style={{ backgroundColor: '#3b82f6' }} />
                 <span>Manchester</span>
+                <div className="w-4 h-4 rounded-sm border ml-2" style={{ backgroundColor: '#16a34a' }} />
+                <span>Chester</span>
               </div>
               <Button onClick={() => window.print()}>
                 <Printer className="w-4 h-4 mr-2" />
@@ -360,6 +361,14 @@ export default function PendingOrders() {
             >
               <div className="w-3 h-3 rounded-sm mr-1" style={{ backgroundColor: '#3b82f6' }} />
               Manchester ({pendingOrders.filter(o => o.collectionLocation === 'Manchester').length})
+            </Button>
+            <Button
+              variant={printLocation === 'Chester' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setPrintLocation('Chester')}
+            >
+              <div className="w-3 h-3 rounded-sm mr-1" style={{ backgroundColor: '#16a34a' }} />
+              Chester ({pendingOrders.filter(o => o.collectionLocation === 'Chester').length})
             </Button>
           </div>
           <Button 

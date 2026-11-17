@@ -38,6 +38,7 @@ export function StockDashboard() {
           remaining24: 0,
           remainingWilmslow: 0,
           remainingManchester: 0,
+          remainingChester: 0,
         };
 
         existing.totalOrdered += product.quantity;
@@ -54,6 +55,8 @@ export function StockDashboard() {
             existing.remainingWilmslow += product.quantity;
           } else if (order.collectionLocation.toLowerCase() === 'manchester') {
             existing.remainingManchester += product.quantity;
+          } else if (order.collectionLocation.toLowerCase() === 'chester') {
+            existing.remainingChester += product.quantity;
           }
         }
         existing.remaining = existing.totalOrdered - existing.totalCollected;
@@ -88,7 +91,7 @@ export function StockDashboard() {
   );
 
   const exportStockList = () => {
-    const headers = ['Product', 'Ordered', 'Collected', 'Remaining', 'Wilmslow', 'Manchester', '23rd', '24th'];
+    const headers = ['Product', 'Ordered', 'Collected', 'Remaining', 'Wilmslow', 'Manchester', 'Chester', '23rd', '24th'];
     const rows = stockItems.map(item => [
       item.productName,
       item.totalOrdered,
@@ -96,6 +99,7 @@ export function StockDashboard() {
       item.remaining,
       item.remainingWilmslow,
       item.remainingManchester,
+      item.remainingChester,
       item.remaining23,
       item.remaining24
     ]);
@@ -129,7 +133,7 @@ export function StockDashboard() {
     <div className="space-y-6">
       {/* Location Tabs */}
       <Tabs value={activeLocation} onValueChange={setActiveLocation} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-14">
+        <TabsList className="grid w-full grid-cols-4 h-14">
           <TabsTrigger value="all" className="text-lg font-medium">
             All Locations
           </TabsTrigger>
@@ -138,6 +142,9 @@ export function StockDashboard() {
           </TabsTrigger>
           <TabsTrigger value="manchester" className="text-lg font-medium">
             Manchester
+          </TabsTrigger>
+          <TabsTrigger value="chester" className="text-lg font-medium">
+            Chester
           </TabsTrigger>
         </TabsList>
 
@@ -257,7 +264,7 @@ export function StockDashboard() {
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-7 gap-2 text-center">
+                      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 text-center">
                         <div className="p-2 bg-card rounded">
                           <p className="text-xl font-bold">{item.totalOrdered}</p>
                           <p className="text-xs text-muted-foreground uppercase">Ordered</p>
@@ -279,6 +286,10 @@ export function StockDashboard() {
                         <div className="p-2 bg-purple-500/10 rounded">
                           <p className="text-xl font-bold text-purple-600">{item.remainingManchester}</p>
                           <p className="text-xs text-muted-foreground uppercase">Manchester</p>
+                        </div>
+                        <div className="p-2 bg-success/10 rounded">
+                          <p className="text-xl font-bold text-success">{item.remainingChester}</p>
+                          <p className="text-xs text-muted-foreground uppercase">Chester</p>
                         </div>
                         <div className="p-2 bg-primary/10 rounded">
                           <p className="text-xl font-bold text-primary">{item.remaining23}</p>
