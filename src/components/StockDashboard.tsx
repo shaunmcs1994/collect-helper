@@ -9,6 +9,7 @@ import { getProductStyle } from '@/utils/productColors';
 import { EmojiPicker } from '@/components/EmojiPicker';
 import { toast } from 'sonner';
 import { StockItem } from '@/types/order';
+import { christmasDay } from '@/utils/christmas';
 
 export function StockDashboard() {
   const { orders, productEmojis, productColors, setProductEmoji, setProductColor } = useOrders();
@@ -43,9 +44,9 @@ export function StockDashboard() {
         if (order.status === 'collected') {
           existing.totalCollected += product.quantity;
         } else {
-          if (order.collectionDate === '23') {
+          if (christmasDay(order.collectionDate) === '23') {
             existing.remaining23 += product.quantity;
-          } else if (order.collectionDate === '24') {
+          } else if (christmasDay(order.collectionDate) === '24') {
             existing.remaining24 += product.quantity;
           }
           // Track remaining by location
@@ -70,7 +71,7 @@ export function StockDashboard() {
   const getRemainingForLocation = (location: string, date?: '23' | '24') => {
     const filteredOrders = getFilteredOrders(location);
     return filteredOrders.filter(order => {
-      const matchesDate = !date || order.collectionDate === date;
+      const matchesDate = !date || christmasDay(order.collectionDate) === date;
       return order.status === 'pending' && matchesDate;
     }).length;
   };

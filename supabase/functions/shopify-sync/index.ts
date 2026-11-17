@@ -194,8 +194,11 @@ serve(async (req) => {
           fulfillmentStatus: order.fulfillment_status || 'unfulfilled',
         });
         console.log('Skipped order ' + order.name + ': no date tag. Tags: "' + (order.tags || '(none)') + '", fulfillment: ' + (order.fulfillment_status || 'unfulfilled'));
-      } else {
+      } else if (/-12-2[34]$/.test(collectionDate)) {
+        // Christmas-only: keep 23rd / 24th December collections
         relevantOrders.push(order);
+      } else {
+        console.log('Skipped order ' + order.name + ': not a Christmas date (' + collectionDate + ')');
       }
     }
 

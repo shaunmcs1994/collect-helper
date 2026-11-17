@@ -178,12 +178,20 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
   const loadOrders = async () => {
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      // Christmas-only: load 23rd/24th December orders, paging past the 1000-row limit
+      const data: any[] = [];
+      const pageSize = 1000;
+      for (let from = 0; ; from += pageSize) {
+        const { data: page, error } = await supabase
+          .from('orders')
+          .select('*')
+          .or('collection_date.like.%-12-23,collection_date.like.%-12-24')
+          .order('created_at', { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        data.push(...(page || []));
+        if (!page || page.length < pageSize) break;
+      }
 
       const mappedOrders: Order[] = (data || []).map(row => {
         return {
