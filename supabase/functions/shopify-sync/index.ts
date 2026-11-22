@@ -22,9 +22,10 @@ interface SkippedOrder {
 // Parse location from Zapiet tags
 function getLocationFromTags(tags: string[]): string {
   const upperTags = tags.map(t => t.toUpperCase().trim());
+  // Chester first: some Chester orders still carry an old WILM tag
+  if (upperTags.includes('CHESTER')) return 'Chester';
   if (upperTags.includes('WILM')) return 'Wilmslow';
   if (upperTags.includes('NQ')) return 'Manchester';
-  if (upperTags.includes('CHESTER')) return 'Chester';
   return 'Unknown';
 }
 
